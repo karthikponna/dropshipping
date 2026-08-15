@@ -3,6 +3,8 @@
  * glyph inherits `currentColor` so nav rows recolor with their text utility.
  */
 
+import { LogoMark } from "@/components/brand/logo-mark";
+
 interface IconProps {
   className?: string;
 }
@@ -28,25 +30,9 @@ function Glyph({
   );
 }
 
-/** The brand mark: a rounded triangle with a solid inner triangle. */
-export function BrandMark({ className = "h-[22px] w-6" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 22"
-      fill="none"
-      className={`shrink-0 ${className}`}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M10.27 2.06a2 2 0 0 1 3.46 0l8.4 14.94A2 2 0 0 1 20.4 20H3.6a2 2 0 0 1-1.73-3L10.27 2.06Z"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-      <path d="M12 8.9l3.6 6.6H8.4L12 8.9Z" fill="currentColor" />
-    </svg>
-  );
+/** The shared brand mark, so the rail matches the marketing site exactly. */
+export function BrandMark({ className = "h-6 w-6" }: IconProps) {
+  return <LogoMark className={className} />;
 }
 
 export function HomeIcon(props: IconProps) {

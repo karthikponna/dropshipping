@@ -11,10 +11,17 @@ export interface SupabaseCredentials {
   anonKey: string;
 }
 
-/** Referenced literally so Next can inline the public vars in client bundles. */
+/**
+ * Referenced literally so Next can inline the public vars in client bundles —
+ * hence both key names spelled out rather than looked up dynamically.
+ *
+ * Newer Supabase projects issue a `sb_publishable_…` key; older ones an anon
+ * JWT. Either is accepted, under either variable name.
+ */
 export function getSupabaseCredentials(): SupabaseCredentials | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) return null;
   return { url, anonKey };

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+  <style>
+    /* The brackets flip to white on a dark tab strip; the accent square is
+       legible on both, so it stays constant. */
+    .bracket { fill: #0B1015; stroke: #0B1015; }
+    @media (prefers-color-scheme: dark) {
+      .bracket { fill: #FFFFFF; stroke: #FFFFFF; }
+    }
+  </style>
+  <path class="bracket" stroke-width="0.5" d="M1 1h9v3H4v6H1z" />
+  <path class="bracket" stroke-width="0.5" d="M23 23h-9v-3h6v-6h3z" />
+  <path fill="#0562EF" d="M9 9h6v6H9z" />
+</svg>
