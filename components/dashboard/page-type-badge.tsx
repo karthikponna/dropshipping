@@ -1,6 +1,5 @@
+import { cx } from "@/lib/dashboard/format";
 import { PAGE_TYPE_LABELS, type PageType } from "@/lib/types";
-
-import { cx } from "./format";
 import { LayoutIcon, TagIcon } from "./icons";
 
 const ICONS: Record<PageType, (props: { className?: string }) => React.ReactElement> = {

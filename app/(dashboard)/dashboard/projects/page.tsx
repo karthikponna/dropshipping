@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { listProjects } from "@/components/dashboard/data";
-import { formatCount } from "@/components/dashboard/format";
+import { listProjects } from "@/lib/dashboard/data";
+import { formatCount } from "@/lib/dashboard/format";
 import { ProjectCard } from "@/components/dashboard/project-card";
 import { ProjectsEmptyState } from "@/components/dashboard/projects-empty-state";
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from "@/lib/supabase/env";

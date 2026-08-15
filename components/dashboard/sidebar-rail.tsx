@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { cx } from "./format";
+import { cx } from "@/lib/dashboard/format";
 import {
   BrandMark,
   ChevronRightIcon,

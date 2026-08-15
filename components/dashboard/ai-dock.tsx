@@ -2,11 +2,10 @@
 
 import { useActionState, useRef, useState } from "react";
 
+import { createProjectFromPromptAction } from "@/lib/dashboard/actions";
+import { cx } from "@/lib/dashboard/format";
+import { PROJECT_FORM_INITIAL_STATE } from "@/lib/dashboard/form-state";
 import { PAGE_TYPE_LABELS, PAGE_TYPES, type PageType } from "@/lib/types";
-
-import { createProjectFromPromptAction } from "./actions";
-import { cx } from "./format";
-import { PROJECT_FORM_INITIAL_STATE } from "./form-state";
 import { ArrowUpIcon, LayoutIcon, TagIcon } from "./icons";
 
 const PAGE_TYPE_ICONS: Record<PageType, (props: { className?: string }) => React.ReactElement> = {

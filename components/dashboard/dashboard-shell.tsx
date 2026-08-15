@@ -15,7 +15,12 @@ interface DashboardShellProps {
 
 /**
  * The console frame: a 255px rail on the left (a dismissible drawer below
- * `sm`), a sticky topbar, and the page in the remaining column.
+ * `sm`), a topbar, and the page in the remaining column.
+ *
+ * The frame is exactly one viewport tall and `<main>` is the only scroller.
+ * That is what lets the builder fill the pane with `h-full` no matter what
+ * else is above it — a setup notice, say — instead of guessing at the offset
+ * with `calc(100dvh - ...)` and hanging its composer below the fold.
  */
 export function DashboardShell({ children, email, notice }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -36,8 +41,8 @@ export function DashboardShell({ children, email, notice }: DashboardShellProps)
   }, [menuOpen]);
 
   return (
-    <div className="flex min-h-dvh">
-      <aside className="sticky top-0 hidden h-dvh w-amb-sidebar shrink-0 flex-col border-r border-amb-sidebar-border bg-amb-sidebar sm:flex">
+    <div className="flex h-dvh overflow-hidden">
+      <aside className="hidden h-full w-amb-sidebar shrink-0 flex-col border-r border-amb-sidebar-border bg-amb-sidebar sm:flex">
         <SidebarRail email={email} />
       </aside>
 
@@ -55,14 +60,14 @@ export function DashboardShell({ children, email, notice }: DashboardShellProps)
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 min-h-0 flex-1 flex-col">
         {notice && (
-          <p className="border-b border-amb-border bg-amb-warning-bg px-4 py-2 text-[12px] text-amb-warning-foreground">
+          <p className="shrink-0 border-b border-amb-border bg-amb-warning-bg px-4 py-2 text-[12px] text-amb-warning-foreground">
             {notice}
           </p>
         )}
         <Topbar email={email} onOpenMenu={() => setMenuOpen(true)} />
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

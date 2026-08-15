@@ -50,7 +50,7 @@ export function PreviewToolbar({
   actions,
 }: PreviewToolbarProps) {
   return (
-    <div className="flex h-12 shrink-0 items-center gap-3 border-b border-amb-border bg-amb-background px-3">
+    <div className="flex h-12 shrink-0 items-center gap-2 border-b border-amb-border bg-amb-background px-3 sm:gap-3">
       <div
         aria-label="Preview mode"
         className="inline-flex items-center gap-0.5 rounded-amb-row border border-amb-border bg-amb-muted p-0.5"
@@ -87,7 +87,9 @@ export function PreviewToolbar({
       {tab === "preview" ? (
         <div
           aria-label="Preview width"
-          className="inline-flex items-center gap-0.5 rounded-amb-row border border-amb-border bg-amb-muted p-0.5"
+          // Hidden on phones: the pane is already narrower than the smallest
+          // device width, so every choice would render at the same scale.
+          className="hidden items-center gap-0.5 rounded-amb-row border border-amb-border bg-amb-muted p-0.5 sm:inline-flex"
           role="group"
         >
           {DEVICES.map(({ id, label, Icon }) => {
@@ -117,7 +119,7 @@ export function PreviewToolbar({
         </div>
       ) : null}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex min-w-0 items-center gap-2">
         {isStreaming ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amb-muted px-2.5 py-1 text-[12px] text-amb-muted-foreground">
             <span

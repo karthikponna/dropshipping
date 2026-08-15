@@ -6,7 +6,7 @@ import {
   PROJECT_COLUMNS,
   toProjectRecord,
   type ProjectRow,
-} from "@/components/dashboard/data";
+} from "@/lib/dashboard/data";
 import { SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import type { ProjectRecord } from "@/lib/types";
 

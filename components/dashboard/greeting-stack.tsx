@@ -1,4 +1,4 @@
-import { greetingForHour } from "./format";
+import { greetingForHour } from "@/lib/dashboard/format";
 
 interface GreetingStackProps {
   /** Rendered on the server, so this is the server's clock. */

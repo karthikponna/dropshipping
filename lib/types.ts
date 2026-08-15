@@ -365,7 +365,12 @@ export interface ComponentShell {
   name: string;
   /** One line on what this component is for. */
   purpose: string;
-  /** The exact signature the model must implement. */
+  /**
+   * The exact signature the model must implement, rendered verbatim into the
+   * system prompt. Deliberately unannotated: React 19's types have no
+   * `JSX.Element` global, so a signature carrying one would not compile in the
+   * exported project.
+   */
   signature: string;
   /** Hard requirements, rendered as bullets in the system prompt. */
   requirements: string[];

@@ -11,7 +11,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Navbar.tsx",
     name: "Navbar",
     purpose: "Sticky top bar with the shop wordmark, section links and one CTA.",
-    signature: "export default function Navbar(): JSX.Element",
+    signature: "export default function Navbar()",
     requirements: [
       "Shop name as a text wordmark on the left",
       "3–4 anchor links pointing at the sections below (#features, #pricing, #testimonials)",
@@ -23,7 +23,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Hero.tsx",
     name: "Hero",
     purpose: "Above-the-fold pitch: headline, subcopy, two CTAs and one image.",
-    signature: "export default function Hero(): JSX.Element",
+    signature: "export default function Hero()",
     requirements: [
       "One h1 headline of at most 9 words that names the actual product",
       "A one-sentence subheadline",
@@ -35,7 +35,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Features.tsx",
     name: "Features",
     purpose: "Three to six benefit cards with an id=\"features\" anchor.",
-    signature: "export default function Features(): JSX.Element",
+    signature: "export default function Features()",
     requirements: [
       "Section heading plus a one-line intro",
       "3–6 cards, each with a short title and two lines of copy",
@@ -47,7 +47,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Pricing.tsx",
     name: "Pricing",
     purpose: "Two or three purchase tiers with an id=\"pricing\" anchor.",
-    signature: "export default function Pricing(): JSX.Element",
+    signature: "export default function Pricing()",
     requirements: [
       "2–3 tiers with a name, price, short description and 3–5 feature bullets",
       "One tier visually marked as recommended",
@@ -59,7 +59,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Testimonials.tsx",
     name: "Testimonials",
     purpose: "Social proof quotes with an id=\"testimonials\" anchor.",
-    signature: "export default function Testimonials(): JSX.Element",
+    signature: "export default function Testimonials()",
     requirements: [
       "2–3 quotes with an author name and role",
       "An avatar per quote from picsum.photos, rendered round",
@@ -70,7 +70,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/CTA.tsx",
     name: "CTA",
     purpose: "Closing conversion band before the footer.",
-    signature: "export default function CTA(): JSX.Element",
+    signature: "export default function CTA()",
     requirements: [
       "One short heading and one line of supporting copy",
       "A single primary action — button or email capture, not both",
@@ -81,7 +81,7 @@ export const LANDING_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Footer.tsx",
     name: "Footer",
     purpose: "Site footer with link columns and legal line.",
-    signature: "export default function Footer(): JSX.Element",
+    signature: "export default function Footer()",
     requirements: [
       "Wordmark plus a one-line description",
       "2–3 link columns with 3–4 plausible links each",

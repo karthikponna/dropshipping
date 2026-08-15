@@ -11,7 +11,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Navbar.tsx",
     name: "Navbar",
     purpose: "Store bar with wordmark, a few category links and a cart affordance.",
-    signature: "export default function Navbar(): JSX.Element",
+    signature: "export default function Navbar()",
     requirements: [
       "Shop name as a text wordmark on the left",
       "2–4 category links",
@@ -23,7 +23,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Gallery.tsx",
     name: "Gallery",
     purpose: "Product imagery: one main shot plus selectable thumbnails.",
-    signature: "export default function Gallery(): JSX.Element",
+    signature: "export default function Gallery()",
     requirements: [
       "One large main image and 3–4 thumbnails, all from picsum.photos",
       "Thumbnail selection is client state — start the file with \"use client\"",
@@ -35,7 +35,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/ProductInfo.tsx",
     name: "ProductInfo",
     purpose: "Title, rating, description and the variant pickers.",
-    signature: "export default function ProductInfo(): JSX.Element",
+    signature: "export default function ProductInfo()",
     requirements: [
       "One h1 with the product name and a one-paragraph description",
       "A rating line with a review count",
@@ -47,7 +47,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/PriceBlock.tsx",
     name: "PriceBlock",
     purpose: "Price, any compare-at price, and the stock/shipping reassurance line.",
-    signature: "export default function PriceBlock(): JSX.Element",
+    signature: "export default function PriceBlock()",
     requirements: [
       "Current price prominent, optional struck-through compare-at price beside it",
       "A discount badge only when a compare-at price is shown",
@@ -59,7 +59,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/AddToCart.tsx",
     name: "AddToCart",
     purpose: "Quantity stepper plus the primary purchase action.",
-    signature: "export default function AddToCart(): JSX.Element",
+    signature: "export default function AddToCart()",
     requirements: [
       "Quantity stepper with client state — start the file with \"use client\"",
       "A full-width primary Add to cart button and a secondary Buy now",
@@ -71,7 +71,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Specs.tsx",
     name: "Specs",
     purpose: "Specification table of concrete product attributes.",
-    signature: "export default function Specs(): JSX.Element",
+    signature: "export default function Specs()",
     requirements: [
       "5–8 label/value rows separated by hairlines",
       "Values are concrete — materials, dimensions, weight, care, origin",
@@ -82,7 +82,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Reviews.tsx",
     name: "Reviews",
     purpose: "Customer reviews with a rating summary.",
-    signature: "export default function Reviews(): JSX.Element",
+    signature: "export default function Reviews()",
     requirements: [
       "An average-rating summary with a distribution or count",
       "3–4 reviews, each with author, rating, date and body",
@@ -93,7 +93,7 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
     path: "components/Footer.tsx",
     name: "Footer",
     purpose: "Store footer with link columns, payment note and legal line.",
-    signature: "export default function Footer(): JSX.Element",
+    signature: "export default function Footer()",
     requirements: [
       "Wordmark plus a one-line store description",
       "2–3 link columns covering shipping, returns and contact",

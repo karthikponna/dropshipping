@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import { cx } from "@/lib/dashboard/format";
+
 import { FeatureCard } from "./feature-card";
-import { cx } from "./format";
 import { ArrowRightIcon, CheckIcon } from "./icons";
 
 export interface OnboardingStep {
@@ -81,7 +82,8 @@ export function OnboardingCard({ steps }: OnboardingCardProps) {
       </ul>
 
       <p className="mt-auto pt-6 text-[13px] text-amb-muted-foreground">
-        {nextStep ? `Next: ${nextStep.label.toLowerCase()}.` : "Setup complete."}
+        {/* Verbatim label — lowercasing it mangles the acronym in "Add your API key". */}
+        {nextStep ? `Next: ${nextStep.label}.` : "Setup complete."}
       </p>
     </FeatureCard>
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { ApiKeyForm } from "@/components/dashboard/api-key-form";
-import { getDashboardSession } from "@/components/dashboard/data";
+import { getDashboardSession } from "@/lib/dashboard/data";
 import { getStoredAnthropicKeyPreview } from "@/lib/anthropic-key";
 import { isEncryptionConfigured } from "@/lib/crypto";
 import { SUPABASE_SETUP_HINT } from "@/lib/supabase/env";

@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 
-import { manageApiKeyAction } from "./actions";
-import { SETTINGS_FORM_INITIAL_STATE } from "./form-state";
+import { manageApiKeyAction } from "@/lib/dashboard/actions";
+import { SETTINGS_FORM_INITIAL_STATE } from "@/lib/dashboard/form-state";
 import { KeyIcon } from "./icons";
 
 interface ApiKeyFormProps {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import type { ProjectListItem } from "./data";
-import { formatCount, formatRelativeTime } from "./format";
+import type { ProjectListItem } from "@/lib/dashboard/data";
+import { formatCount, formatRelativeTime } from "@/lib/dashboard/format";
 import { PageTypeBadge } from "./page-type-badge";
 import { ProjectCardActions } from "./project-card-actions";
 

@@ -6,8 +6,8 @@ import {
   PROJECT_COLUMNS,
   toProjectRecord,
   type ProjectRow,
-} from "@/components/dashboard/data";
-import { deriveProjectName } from "@/components/dashboard/format";
+} from "@/lib/dashboard/data";
+import { deriveProjectName } from "@/lib/dashboard/format";
 import { SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import { isPageType, type PageType, type ProjectRecord } from "@/lib/types";
 

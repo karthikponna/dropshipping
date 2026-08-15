@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { AiDock } from "@/components/dashboard/ai-dock";
-import { deriveMetrics, listProjects } from "@/components/dashboard/data";
+import { deriveMetrics, listProjects } from "@/lib/dashboard/data";
 import { GreetingStack } from "@/components/dashboard/greeting-stack";
 import { HowItWorksCard } from "@/components/dashboard/how-it-works-card";
 import { MetricTopline } from "@/components/dashboard/metric-topline";

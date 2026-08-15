@@ -62,7 +62,7 @@ Stack
 - Next.js 15 App Router, React 19, TypeScript. Every file is .tsx.
 - One default-exported component per file, named exactly after the file: components/Hero.tsx exports Hero.
 - Import siblings through the alias: import Hero from "@/components/Hero";
-- Do not annotate the return type. Write export default function Hero() { ... } and let TypeScript infer it. Never write : JSX.Element — that global does not exist in React 19's types.
+- Leave the return type off, exactly as the component slots show it: write export default function Hero() { ... } and let TypeScript infer it. An explicit : JSX.Element does not compile under React 19, whose types dropped that global.
 - No extra exports: no metadata objects, no named helper exports, no default props objects.
 
 Styling

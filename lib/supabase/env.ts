@@ -24,10 +24,5 @@ export function isSupabaseConfigured(): boolean {
   return getSupabaseCredentials() !== null;
 }
 
-/** Server-only. Present only where the service role is genuinely required. */
-export function getSupabaseServiceRoleKey(): string | null {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? null;
-}
-
 export const SUPABASE_SETUP_HINT =
   "Supabase is not configured. Copy .env.example to .env.local, paste your project URL and anon key, then restart the dev server.";

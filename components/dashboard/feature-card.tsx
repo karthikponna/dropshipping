@@ -1,4 +1,4 @@
-import { cx } from "./format";
+import { cx } from "@/lib/dashboard/format";
 
 interface FeatureCardProps {
   children: React.ReactNode;

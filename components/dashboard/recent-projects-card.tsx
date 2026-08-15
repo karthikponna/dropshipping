@@ -1,8 +1,9 @@
 import Link from "next/link";
 
-import type { ProjectListItem } from "./data";
+import type { ProjectListItem } from "@/lib/dashboard/data";
+import { formatCount, formatRelativeTime } from "@/lib/dashboard/format";
+
 import { FeatureCard, FeatureCardEyebrow } from "./feature-card";
-import { formatCount, formatRelativeTime } from "./format";
 import { ArrowRightIcon } from "./icons";
 import { PageTypeBadge } from "./page-type-badge";
 

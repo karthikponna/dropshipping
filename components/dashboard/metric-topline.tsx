@@ -1,5 +1,5 @@
-import type { DashboardMetrics } from "./data";
-import { formatRelativeTime } from "./format";
+import type { DashboardMetrics } from "@/lib/dashboard/data";
+import { formatRelativeTime } from "@/lib/dashboard/format";
 
 interface MetricToplineProps {
   metrics: DashboardMetrics;

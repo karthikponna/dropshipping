@@ -3,8 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-import { deleteProjectAction, renameProjectAction } from "./actions";
-import { PROJECT_FORM_INITIAL_STATE } from "./form-state";
+import { deleteProjectAction, renameProjectAction } from "@/lib/dashboard/actions";
+import { PROJECT_FORM_INITIAL_STATE } from "@/lib/dashboard/form-state";
 import { ArrowRightIcon, PencilIcon, TrashIcon } from "./icons";
 
 const GHOST_ICON =

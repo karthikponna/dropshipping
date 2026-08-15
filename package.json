@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:ai && npm run test:preview && npm run test:export",
+    "test:ai": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON lib/ai/run-tests.mjs",
+    "test:preview": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON lib/preview/run-tests.mjs",
+    "test:export": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON lib/export/project-zip.test.mjs",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",

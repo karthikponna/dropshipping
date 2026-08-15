@@ -12,9 +12,10 @@ import {
 } from "@/lib/types";
 
 /**
- * Server-side reads for the dashboard and the `/api/projects` handlers. Every
- * function degrades to an empty result when Supabase is unconfigured or the
- * visitor is signed out, so the console renders with blank env vars.
+ * Server-side reads for the dashboard, the builder and the `/api/projects`
+ * handlers. Every function degrades to an empty result when Supabase is
+ * unconfigured or the visitor is signed out, so the console renders with blank
+ * env vars.
  *
  * RLS scopes every query to the signed-in user, so no `user_id` filter is
  * needed beyond the insert path.
