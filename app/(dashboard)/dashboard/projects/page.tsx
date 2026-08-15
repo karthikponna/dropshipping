@@ -1,16 +1,39 @@
 import type { Metadata } from "next";
 
+import { listProjects } from "@/components/dashboard/data";
+import { formatCount } from "@/components/dashboard/format";
+import { ProjectCard } from "@/components/dashboard/project-card";
+import { ProjectsEmptyState } from "@/components/dashboard/projects-empty-state";
+import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
+
 export const metadata: Metadata = { title: "Projects" };
 
-/* PLACEHOLDER — Wave 2 (dashboard-shell) replaces this with the saved-pages
-   grid, reading ProjectRecord rows for the signed-in user. */
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  const projects = await listProjects();
+  const configured = isSupabaseConfigured();
+
   return (
-    <div className="px-8 py-16">
-      <h1>Projects</h1>
-      <p className="mt-4 text-amb-muted-foreground">
-        Scaffold only — the project grid lands in Wave 2.
-      </p>
+    <div className="px-4 pt-8 pb-16 sm:px-6 lg:px-8">
+      <header className="flex flex-wrap items-end gap-x-3 gap-y-1">
+        <h1 className="text-[30px] leading-[1.15] tracking-[-0.035em]">Projects</h1>
+        <p className="pb-1 text-[14px] text-amb-muted-foreground">
+          {projects.length === 0
+            ? "Saved pages live here."
+            : `${formatCount(projects.length, "page")} saved.`}
+        </p>
+      </header>
+
+      <div className="mt-8">
+        {projects.length === 0 ? (
+          <ProjectsEmptyState notice={configured ? null : SUPABASE_SETUP_HINT} />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

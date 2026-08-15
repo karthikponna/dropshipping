@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { dashboardFontVariables } from "@/lib/fonts";
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -11,27 +12,24 @@ import { getCurrentUser } from "@/lib/supabase/server";
  *
  * Auth guard runs here as well as in middleware. When Supabase is unconfigured
  * the guard steps aside so the console can still be developed locally.
- *
- * Wave 2 (dashboard-shell) adds the 255px sidebar and topbar around {children}.
  */
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const configured = isSupabaseConfigured();
+  let email: string | null = null;
 
   if (configured) {
     const user = await getCurrentUser();
     if (!user) redirect("/login");
+    email = user.email ?? null;
   }
 
   return (
     <div className={`amb-scope ${dashboardFontVariables} min-h-dvh`}>
-      {!configured && (
-        <p className="border-b border-amb-border bg-amb-warning-bg px-4 py-2 text-[12px] text-amb-warning-foreground">
-          {SUPABASE_SETUP_HINT}
-        </p>
-      )}
-      {children}
+      <DashboardShell email={email} notice={configured ? null : SUPABASE_SETUP_HINT}>
+        {children}
+      </DashboardShell>
     </div>
   );
 }

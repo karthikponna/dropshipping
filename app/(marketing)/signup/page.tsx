@@ -1,24 +1,38 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-export const metadata: Metadata = { title: "Sign up" };
+import { AuthShell, AuthSwitch } from "@/components/marketing/auth-card";
+import { SignupForm } from "@/components/marketing/signup-form";
 
-/* PLACEHOLDER — Wave 2 (marketing) builds the supermemory email/password form
-   here. Wire it to `signUpAction` from lib/auth/actions.ts with
-   `useActionState(signUpAction, AUTH_ACTION_INITIAL_STATE)`; fields are
-   `email`, `password`, optional `fullName`. Render `state.notice` when the
-   project has email confirmation on. Email/password only. */
-export default function SignupPage() {
+export const metadata: Metadata = {
+  title: "Sign up",
+  description: "Create a DropShipping account with an email and a password.",
+};
+
+/** Only same-origin paths survive, so a crafted `next` cannot bounce users off-site. */
+function safeNext(value: string | string[] | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return value.startsWith("/") && !value.startsWith("//") ? value : undefined;
+}
+
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const { next } = await searchParams;
+
   return (
-    <main className="sm-container sm-section">
-      <p className="font-sm-mono text-[11px] font-medium uppercase tracking-[0.14em] text-sm-blue">
-        ⟩ Sign up
-      </p>
-      <h2 className="mt-4">Start building<span className="dot">.</span></h2>
-      <p className="mt-4">Form pending — Wave 2 wires signUpAction.</p>
-      <p className="mt-8 text-[14.5px]">
-        Already have an account? <Link href="/login">Log in</Link>
-      </p>
-    </main>
+    <AuthShell
+      eyebrow="Sign up"
+      title={
+        <>
+          Start building<span className="dot">.</span>
+        </>
+      }
+      subtitle="An email and a password is the whole signup. Describe a shop and version one gets written."
+      footer={<AuthSwitch prompt="Already have an account?" href="/login" label="Log in" />}
+    >
+      <SignupForm next={safeNext(next)} />
+    </AuthShell>
   );
 }

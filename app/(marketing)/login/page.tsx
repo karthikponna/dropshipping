@@ -1,23 +1,38 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-export const metadata: Metadata = { title: "Log in" };
+import { AuthShell, AuthSwitch } from "@/components/marketing/auth-card";
+import { LoginForm } from "@/components/marketing/login-form";
 
-/* PLACEHOLDER — Wave 2 (marketing) builds the supermemory email/password form
-   here. Wire it to `signInAction` from lib/auth/actions.ts with
-   `useActionState(signInAction, AUTH_ACTION_INITIAL_STATE)`; fields are
-   `email`, `password` and an optional hidden `next`. Email/password only. */
-export default function LoginPage() {
+export const metadata: Metadata = {
+  title: "Log in",
+  description: "Sign in to DropShipping with your email and password.",
+};
+
+/** Only same-origin paths survive, so a crafted `next` cannot bounce users off-site. */
+function safeNext(value: string | string[] | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return value.startsWith("/") && !value.startsWith("//") ? value : undefined;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const { next } = await searchParams;
+
   return (
-    <main className="sm-container sm-section">
-      <p className="font-sm-mono text-[11px] font-medium uppercase tracking-[0.14em] text-sm-blue">
-        ⟩ Log in
-      </p>
-      <h2 className="mt-4">Welcome back<span className="dot">.</span></h2>
-      <p className="mt-4">Form pending — Wave 2 wires signInAction.</p>
-      <p className="mt-8 text-[14.5px]">
-        No account yet? <Link href="/signup">Sign up</Link>
-      </p>
-    </main>
+    <AuthShell
+      eyebrow="Log in"
+      title={
+        <>
+          Welcome back<span className="dot">.</span>
+        </>
+      }
+      subtitle="Sign in to your dashboard and pick up the last generation where it stopped."
+      footer={<AuthSwitch prompt="No account yet?" href="/signup" label="Create one" />}
+    >
+      <LoginForm next={safeNext(next)} />
+    </AuthShell>
   );
 }
