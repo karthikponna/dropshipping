@@ -217,6 +217,9 @@ export function applyGenerationEvent(
       return {
         ...state,
         phase: "complete",
+        // Nothing is in progress any more, so the last in-progress message must
+        // not outlive it: the rail would read "Finished — Saving version".
+        statusMessage: null,
         files: event.files,
         pending: [],
         theme: event.theme,
