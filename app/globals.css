@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* Two design systems live in this app and must never bleed into each other.
+   Raw CSS variables + base element styles for each are scoped to a wrapper
+   class applied by the matching route-group layout:
+
+     .sm-scope   → app/(marketing)/layout.tsx   supermemory-design-system
+     .amb-scope  → app/(dashboard)/layout.tsx   amboras-admin-design-system
+
+   Tailwind utilities are namespaced instead of scoped (Tailwind emits them at
+   the top level, so scoping is impossible): every supermemory token is `sm-*`
+   and every Amboras token is `amb-*`. `bg-sm-blue` and `bg-amb-primary` cannot
+   collide, so neither system can silently inherit the other's values. */
+@import "../styles/tokens-supermemory.css";
+@import "../styles/tokens-amboras.css";
+
+@theme {
+  /* ── supermemory (marketing + auth) ───────────────────────────────────── */
+  --color-sm-blue: #0562ef;
+  --color-sm-blue-hover: #3782f2;
+  --color-sm-blue-light: #1e78ff;
+  --color-sm-blue-tint: #eaf2ff;
+  --color-sm-blue-paper: #f3f6fd;
+  --color-sm-card-blue: #ddebff;
+  --color-sm-text: #0b1015;
+  --color-sm-text-muted: #0b101599;
+  --color-sm-text-dim: #888e94;
+  --color-sm-bg: #ffffff;
+  --color-sm-bg-alt: #f4f8ff;
+  --color-sm-paper: #fafafa;
+  --color-sm-paper-blue: #f6f8fc;
+  --color-sm-panel: #fbfcfe;
+  --color-sm-panel-border: #e4ecf9;
+  --color-sm-border: #c5dbf2;
+  --color-sm-border-light: #4794e04d;
+  --color-sm-border-strong: #9bc1ea;
+  --color-sm-border-dashed: #0b101529;
+  --color-sm-grid: #0b101529;
+  --color-sm-tick: #1d4ed88c;
+  --color-sm-ring: #0562ef47;
+
+  --font-sm-heading: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --font-sm-body: var(--font-dm-sans), "DM Sans", sans-serif;
+  --font-sm-mono: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  --container-sm-page: 1232px;
+  --container-sm-prose: 860px;
+
+  --ease-sm-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-sm-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-sm-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── amboras admin (dashboard) ────────────────────────────────────────── */
+  --color-amb-background: #ffffff;
+  --color-amb-foreground: #171717;
+  --color-amb-card: #ffffff;
+  --color-amb-card-foreground: #171717;
+  --color-amb-popover: #ffffff;
+  --color-amb-popover-foreground: #171717;
+  --color-amb-primary: #171717;
+  --color-amb-primary-foreground: #ffffff;
+  --color-amb-secondary: #f5f5f5;
+  --color-amb-secondary-foreground: #171717;
+  --color-amb-muted: #fafafa;
+  --color-amb-muted-foreground: #737373;
+  --color-amb-accent: #e5e5e5;
+  --color-amb-accent-foreground: #171717;
+  --color-amb-border: rgba(0, 0, 0, 0.075);
+  --color-amb-input: rgba(0, 0, 0, 0.1);
+  --color-amb-ring: #171717;
+  --color-amb-destructive: #b91c1c;
+  --color-amb-destructive-foreground: #fef2f2;
+  --color-amb-warning: #d97706;
+  --color-amb-warning-foreground: #111827;
+  --color-amb-warning-bg: #fef3c7;
+  --color-amb-success: #16a34a;
+  --color-amb-success-foreground: #166534;
+  --color-amb-success-bg: #dcfce7;
+  --color-amb-info: #2563eb;
+  --color-amb-info-foreground: #ffffff;
+  --color-amb-upgrade: #0a5e87;
+  --color-amb-upgrade-foreground: #ffffff;
+  --color-amb-sidebar: #fafafa;
+  --color-amb-sidebar-foreground: #404040;
+  --color-amb-sidebar-accent: rgba(0, 0, 0, 0.06);
+  --color-amb-sidebar-accent-foreground: #171717;
+  --color-amb-sidebar-border: rgba(0, 0, 0, 0.075);
+  --color-amb-nav-idle: #808080;
+  --color-amb-nav-active: rgba(0, 0, 0, 0.9);
+  --color-amb-nav-active-bg: #ececec;
+  --color-amb-chart-1: #df6035;
+  --color-amb-chart-2: #3080ff;
+  --color-amb-chart-3: #00bb7f;
+  --color-amb-chart-4: #fcbb00;
+  --color-amb-chart-5: #8d54ff;
+  --color-amb-chart-6: #00b7d7;
+  --color-amb-chart-7: #f6339a;
+  --color-amb-chart-8: #a1a1a1;
+
+  --font-amb-body: var(--font-geist), "Geist", system-ui, sans-serif;
+  --font-amb-mono: ui-monospace, SFMono-Regular, monospace;
+
+  /* Radii as actually rendered by the console: rows 8, panels 12, modals 14,
+     feature cards 28, AI dock 32. */
+  --radius-amb-row: 8px;
+  --radius-amb-control: 10px;
+  --radius-amb-panel: 12px;
+  --radius-amb-modal: 14px;
+  --radius-amb-feature: 28px;
+  --radius-amb-dock: 32px;
+
+  --shadow-amb-xs: 0px 1px 4px 0px color-mix(in oklch, #171717 3%, transparent);
+  --shadow-amb-sm: 0px 1px 4px 0px color-mix(in oklch, #171717 5%, transparent),
+    0px 1px 2px -1px color-mix(in oklch, #171717 5%, transparent);
+  --shadow-amb-md: 0px 1px 4px 0px color-mix(in oklch, #171717 5%, transparent),
+    0px 2px 4px -1px color-mix(in oklch, #171717 5%, transparent);
+  --shadow-amb-lg: 0px 1px 4px 0px color-mix(in oklch, #171717 5%, transparent),
+    0px 4px 6px -1px color-mix(in oklch, #171717 5%, transparent);
+  --shadow-amb-xl: 0px 1px 4px 0px color-mix(in oklch, #171717 5%, transparent),
+    0px 8px 10px -1px color-mix(in oklch, #171717 5%, transparent);
+  --shadow-amb-2xl: 0px 1px 4px 0px color-mix(in oklch, #171717 13%, transparent);
+  --shadow-amb-control: 0 1px 2px 0 color-mix(in oklch, #171717 12%, transparent);
+  --shadow-amb-float: 0 0 6px 0 color-mix(in oklch, #2563eb 10%, transparent),
+    0 0 28px 0 color-mix(in oklch, #2563eb 18%, transparent);
+  --shadow-amb-feature: 0 5px 5px -2.5px rgba(0, 0, 0, 0.03),
+    0 3px 3px -1.5px rgba(0, 0, 0, 0.02), 0 2px 2px -1px rgba(0, 0, 0, 0.02),
+    0 1px 1px -0.5px rgba(0, 0, 0, 0.03), 0 0.5px 0.5px 0 rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
+
+  --spacing-amb-sidebar: 255px;
+  --spacing-amb-topbar: 56px;
+  --spacing-amb-control: 32px;
+  --spacing-amb-dock: 674px;
+}
+
+html,
+body {
+  min-height: 100%;
+}

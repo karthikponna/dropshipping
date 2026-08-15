@@ -1,0 +1,176 @@
+/* supermemory-design-system — marketing (/) and auth (/login, /signup).
+   Values measured from supermemory.ai.
+
+   Everything here is scoped to `.sm-scope`, applied once by
+   app/(marketing)/layout.tsx. Variable names match the skill's tokens.css
+   verbatim so CSS lifted from that skill's components.md pastes in unchanged,
+   but nothing reaches the dashboard subtree.
+
+   Tailwind equivalents are namespaced `sm-*`: bg-sm-blue, text-sm-text-muted,
+   font-sm-mono, max-w-sm-page, ease-sm-out-strong. */
+
+.sm-scope {
+  /* Accent — the only hue in the system */
+  --color-blue: #0562ef;
+  --color-blue-hover: #3782f2;
+  --color-blue-light: #1e78ff;
+  --color-blue-tint: #eaf2ff;
+  --color-blue-paper: #f3f6fd;
+  --color-card-blue: #ddebff;
+
+  /* Text */
+  --color-text: #0b1015;
+  --color-text-muted: #0b101599;
+  --color-text-dim: #888e94;
+
+  /* Surfaces */
+  --color-bg: #ffffff;
+  --color-bg-alt: #f4f8ff;
+  --color-paper: #fafafa;
+  --color-paper-blue: #f6f8fc;
+  --color-panel: #fbfcfe;
+  --color-panel-border: #e4ecf9;
+
+  /* Borders */
+  --color-border: #c5dbf2;
+  --color-border-light: #4794e04d;
+  --color-border-strong: #9bc1ea;
+  --color-border-dashed: #0b101529;
+  --color-grid: #0b101529;
+
+  /* Blueprint corner-frame */
+  --cf-stroke: var(--color-border-dashed);
+  --cf-tick-color: #1d4ed88c;
+
+  /* Focus ring */
+  --sm-ring: rgba(5, 98, 239, 0.28);
+  --sm-tint: #edf3ff;
+
+  /* Type — fed by next/font variables set on the same wrapper element */
+  --font-heading: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --font-body: var(--font-dm-sans), "DM Sans", sans-serif;
+  --font-mono: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  /* Motion */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --container: 1232px;
+  --container-prose: 860px;
+
+  /* Sharp corners are the brand. Keep this at 0. */
+  --radius: 0;
+}
+
+/* Rule #1 of the system: border-radius 0 on everything. Deliberately left
+   outside @layer so it also defeats a stray `rounded-*` utility — but only
+   inside .sm-scope, so the dashboard's 8/28/32px radii survive untouched.
+   Escape hatch for avatars and status dots: add the `sm-round` class. */
+.sm-scope,
+.sm-scope *,
+.sm-scope *::before,
+.sm-scope *::after {
+  border-radius: var(--radius);
+}
+
+.sm-scope .sm-round {
+  border-radius: 9999px;
+}
+
+/* Base element styles go in @layer base so Tailwind utilities still win. */
+@layer base {
+  .sm-scope {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sm-scope h1,
+  .sm-scope h2,
+  .sm-scope h3,
+  .sm-scope h4 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .sm-scope h1 {
+    font-size: clamp(40px, 7vw, 72px);
+    line-height: 1.04;
+    letter-spacing: -0.058em;
+  }
+
+  .sm-scope h2 {
+    font-size: clamp(30px, 4.2vw, 44px);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+  }
+
+  .sm-scope h3 {
+    font-size: clamp(22px, 2.4vw, 28px);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .sm-scope h4 {
+    font-size: clamp(17px, 1.6vw, 20px);
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .sm-scope p {
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .sm-scope a {
+    color: var(--color-blue);
+    text-decoration: none;
+  }
+
+  .sm-scope :focus-visible {
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+  }
+}
+
+/* The blue period that closes a headline */
+.sm-scope .dot {
+  color: var(--color-blue);
+}
+
+.sm-scope .sm-container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: 32px;
+}
+
+.sm-scope .sm-section {
+  padding-block: 56px 112px;
+}
+
+@media (max-width: 768px) {
+  .sm-scope .sm-container {
+    padding-inline: 16px;
+  }
+  .sm-scope .sm-section {
+    padding-block: 32px 56px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sm-scope *,
+  .sm-scope *::before,
+  .sm-scope *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
