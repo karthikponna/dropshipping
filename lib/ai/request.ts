@@ -1,3 +1,4 @@
+import { isModelId } from "@/lib/ai/model";
 import { GenerationError, MAX_ATTACHMENTS, isPageType, normalizeTheme } from "@/lib/types";
 import type { FileMap, GenerateRequestBody, GenerationMode, ImageAsset, Theme } from "@/lib/types";
 
@@ -84,6 +85,18 @@ export function parseGenerateRequestBody(raw: unknown): GenerateRequestBody {
 
   const attachments = parseAttachments(input.attachments);
 
+  // Checked for shape rather than against a fixed list: the models a key can
+  // reach are the key's business, and pinning a list here would mean shipping a
+  // release every time Anthropic does. An id that is well-formed but does not
+  // exist comes back from Anthropic as a 404, which `toGenerationError` names.
+  let model: string | undefined;
+  if (input.model !== undefined && input.model !== null && input.model !== "") {
+    if (!isModelId(input.model)) {
+      throw badRequest("model must be an Anthropic model id, e.g. claude-sonnet-5.");
+    }
+    model = input.model;
+  }
+
   // The session id only ever groups nodes in the memory graph, so a malformed
   // one is dropped rather than rejected: it must never fail a generation.
   const sessionId =
@@ -100,6 +113,7 @@ export function parseGenerateRequestBody(raw: unknown): GenerateRequestBody {
     ...(baseTheme ? { baseTheme } : {}),
     ...(attachments.length > 0 ? { attachments } : {}),
     ...(sessionId ? { sessionId } : {}),
+    ...(model ? { model } : {}),
   };
 }
 

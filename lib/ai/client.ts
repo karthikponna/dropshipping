@@ -4,6 +4,7 @@ import Anthropic, {
   APIUserAbortError,
   AuthenticationError,
   BadRequestError,
+  NotFoundError,
   PermissionDeniedError,
   RateLimitError,
 } from "@anthropic-ai/sdk";
@@ -17,6 +18,7 @@ import {
   GENERATION_MODEL,
   GENERATION_TIMEOUT_MS,
   INVESTIGATION_EFFORT,
+  supportsEffort,
 } from "./model";
 import type { ToolSpec } from "./tools";
 
@@ -41,6 +43,8 @@ export function createAnthropicClient(apiKey: string): Anthropic {
 
 export interface StreamTextParams {
   client: Anthropic;
+  /** The model the user picked; the app default when they picked nothing. */
+  model?: string;
   system: string;
   userMessage: string;
   maxTokens: number;
@@ -90,6 +94,7 @@ function buildUserContent(
  */
 export async function streamAssistantText({
   client,
+  model = GENERATION_MODEL,
   system,
   userMessage,
   maxTokens,
@@ -100,14 +105,16 @@ export async function streamAssistantText({
   let stopReason: GenerationStopReason | null = null;
   let outputTokens = 0;
 
+  const effort = GENERATION_EFFORT !== null && supportsEffort(model) ? GENERATION_EFFORT : null;
+
   try {
     const stream = await client.messages.create(
       {
-        model: GENERATION_MODEL,
+        model,
         max_tokens: maxTokens,
         system,
         messages: [{ role: "user", content: buildUserContent(userMessage, images) }],
-        ...(GENERATION_EFFORT === null ? {} : { output_config: { effort: GENERATION_EFFORT } }),
+        ...(effort === null ? {} : { output_config: { effort } }),
         stream: true,
       },
       { signal },
@@ -201,6 +208,7 @@ export async function runToolLoop({
 }: ToolLoopParams): Promise<ToolLoopResult> {
   const wireTools = toAnthropicTools(tools);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: userMessage }];
+  const effort = INVESTIGATION_EFFORT !== null && supportsEffort(model) ? INVESTIGATION_EFFORT : null;
 
   let toolCalls = 0;
   let text = "";
@@ -216,9 +224,7 @@ export async function runToolLoop({
           system,
           messages,
           tools: wireTools,
-          ...(INVESTIGATION_EFFORT === null
-            ? {}
-            : { output_config: { effort: INVESTIGATION_EFFORT } }),
+          ...(effort === null ? {} : { output_config: { effort } }),
           ...(exhausted ? { tool_choice: { type: "none" as const } } : {}),
         },
         { signal },
@@ -294,6 +300,17 @@ export function toGenerationError(error: unknown): GenerationError {
       "invalid_key",
       "This Anthropic API key is not allowed to use the Messages API (403).",
       { retryable: false, cause: error },
+    );
+  }
+
+  // Almost always the selected model: either it does not exist or this key is
+  // not entitled to it. The raw body says "model: ..." and nothing about what
+  // to do, so name the fix.
+  if (error instanceof NotFoundError) {
+    return new GenerationError(
+      "upstream_error",
+      "Anthropic does not offer that model to this API key (404). Pick another model in the composer.",
+      { retryable: false, status: 502, cause: error },
     );
   }
 

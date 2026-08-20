@@ -210,6 +210,11 @@ export interface GenerateRequestBody {
   /** Images the user attached to this turn, already in the bucket. */
   attachments?: ImageAsset[];
   /**
+   * Anthropic model to generate with. Absent means the app default — the
+   * dropdown only sends this once the user has chosen something else.
+   */
+  model?: string;
+  /**
    * Groups the generations of one sitting so the memory graph can tell "these
    * were built together" from "these were built weeks apart". The client mints
    * it and reuses it for the lifetime of the tab.

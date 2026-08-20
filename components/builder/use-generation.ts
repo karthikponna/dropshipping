@@ -56,6 +56,12 @@ export interface GenerationRequest {
    * after a failure re-sends the same images rather than silently dropping them.
    */
   attachments?: readonly ImageAsset[];
+  /**
+   * The Anthropic model chosen in the composer. Held on the request rather than
+   * read fresh on retry, so retrying a failure repeats the run that failed
+   * instead of quietly switching models under the user.
+   */
+  model?: string;
 }
 
 type SettleHandler = (state: GenerationStreamState, request: GenerationRequest) => void;
@@ -132,6 +138,7 @@ function beginRun(projectId: string, request: GenerationRequest): ActiveRun | nu
         mode: request.mode,
         prompt: request.prompt,
         sessionId: getSessionId(),
+        ...(request.model ? { model: request.model } : {}),
         ...(request.baseFiles ? { baseFiles: request.baseFiles } : {}),
         ...(request.baseTheme ? { baseTheme: request.baseTheme } : {}),
         ...(request.attachments && request.attachments.length > 0

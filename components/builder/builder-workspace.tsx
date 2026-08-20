@@ -224,7 +224,7 @@ export function BuilderWorkspace({
   const streamingPreview = generatingPageType === previewRoute;
 
   const send = useCallback(
-    (instruction: string, attachments: readonly ImageAsset[] = []): void => {
+    (instruction: string, attachments: readonly ImageAsset[] = [], model?: string): void => {
       const pageType = activePageType;
       const page = pageState[pageType];
       const pageHasFiles = Object.keys(page.files).length > 0;
@@ -246,6 +246,7 @@ export function BuilderWorkspace({
         mode,
         pageType,
         prompt: instruction,
+        ...(model ? { model } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
         // A brand-new page sends no base theme on purpose: the server reads the
         // sibling page's design out of the graph, which also carries its section

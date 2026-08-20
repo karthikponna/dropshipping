@@ -88,6 +88,9 @@ export async function POST(request: Request): Promise<Response> {
 
   const client = createAnthropicClient(apiKey);
   const encoder = new TextEncoder();
+  // One model for the whole run: the investigation reads the files the writing
+  // turn then edits, and splitting them would have one model plan for another.
+  const model = body.model ?? INVESTIGATION_MODEL;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -107,11 +110,11 @@ export async function POST(request: Request): Promise<Response> {
           body,
           write,
           signal: abort.signal,
-          streamText: (params) => streamAssistantText({ client, ...params }),
+          streamText: (params) => streamAssistantText({ client, model, ...params }),
           persist: persistGeneratedVersion,
           recall: recallGenerationMemory,
           investigate: createInvestigator(
-            (params) => runToolLoop({ client, model: INVESTIGATION_MODEL, ...params }),
+            (params) => runToolLoop({ client, model, ...params }),
             resolvePastWork,
           ),
           remember: rememberGeneration(body),

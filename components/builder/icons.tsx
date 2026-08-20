@@ -38,6 +38,16 @@ export function HistoryIcon(props: IconProps) {
   );
 }
 
+/** The model doing the writing. */
+export function SparkIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9Z" />
+      <path d="M18.5 3.5v3M20 5h-3" />
+    </Glyph>
+  );
+}
+
 /** Restore an earlier version. */
 export function RestoreIcon(props: IconProps) {
   return (

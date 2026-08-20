@@ -10,9 +10,11 @@ import { PAGE_TYPE_LABELS, type ChatMessage, type ImageAsset, type PageType } fr
 import { AttachButton, AttachmentStrip } from "./attachment-strip";
 import { ChatMessageView } from "./chat-message-view";
 import { HistoryIcon } from "./icons";
+import { ModelSwitcher } from "./model-switcher";
 import { PageTypeSwitcher } from "./page-type-switcher";
 import { StreamActivity } from "./stream-activity";
 import { useAttachments } from "./use-attachments";
+import { useModelChoice } from "./use-model-choice";
 
 /**
  * The conversation half of the builder: what has been asked and built so far,
@@ -74,7 +76,7 @@ export interface ChatRailProps {
    * away. Empty otherwise.
    */
   initialDraft: string;
-  onSubmit: (instruction: string, attachments: readonly ImageAsset[]) => void;
+  onSubmit: (instruction: string, attachments: readonly ImageAsset[], model: string) => void;
   onPageTypeChange: (pageType: PageType) => void;
   onRetry: () => void;
   onCancel: () => void;
@@ -105,6 +107,7 @@ export function ChatRail({
   const [dropping, setDropping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachments = useAttachments(projectId);
+  const model = useModelChoice();
 
   const typed = instruction.trim();
   // A photo on its own is a complete request once the page exists — "put this
@@ -136,7 +139,7 @@ export function ChatRail({
         ? typed.slice(0, MAX_INSTRUCTION_CHARS)
         : defaultPhotoInstruction(attachments.items.length);
 
-    onSubmit(text, attachments.items);
+    onSubmit(text, attachments.items, model.selected);
     setInstruction("");
     attachments.clear();
   };
@@ -256,7 +259,7 @@ export function ChatRail({
           <div className="flex items-start gap-1">
             <textarea
               aria-label={hasFiles ? "Describe a change" : "Describe your shop"}
-              className="max-h-40 min-h-11 flex-1 resize-none bg-transparent text-[14px] leading-[1.5] text-amb-foreground placeholder:text-amb-muted-foreground focus:outline-none"
+              className="max-h-40 min-h-11 w-full resize-none bg-transparent text-[14px] leading-[1.5] text-amb-foreground placeholder:text-amb-muted-foreground focus:outline-none"
               disabled={isStreaming}
               maxLength={MAX_INSTRUCTION_CHARS}
               onChange={(event) => setInstruction(event.target.value)}
@@ -283,22 +286,36 @@ export function ChatRail({
               rows={2}
               value={instruction}
             />
+          </div>
 
-            <AttachButton
+          {/* The model sits opposite the send controls, on the row the eye
+              reaches last before pressing send. Locked mid-run: the request is
+              already open, and letting it change would describe the wrong one. */}
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <ModelSwitcher
               disabled={isStreaming}
-              full={attachments.full}
-              onPick={attachments.add}
+              models={model.models}
+              onChange={model.select}
+              selected={model.selected}
             />
 
-            <button
-              aria-label={hasFiles ? "Send this change" : "Build this page"}
-              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amb-primary text-amb-primary-foreground transition-colors disabled:bg-amb-accent disabled:text-amb-muted-foreground"
-              disabled={!canSubmit}
-              onClick={submit}
-              type="button"
-            >
-              <ArrowUpIcon className="h-4 w-4" />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <AttachButton
+                disabled={isStreaming}
+                full={attachments.full}
+                onPick={attachments.add}
+              />
+
+              <button
+                aria-label={hasFiles ? "Send this change" : "Build this page"}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amb-primary text-amb-primary-foreground transition-colors disabled:bg-amb-accent disabled:text-amb-muted-foreground"
+                disabled={!canSubmit}
+                onClick={submit}
+                type="button"
+              >
+                <ArrowUpIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
