@@ -24,7 +24,7 @@ export function ClosingCta() {
             <Eyebrow tone="onBlue" marker>
               Get started
             </Eyebrow>
-            <h2 className="mt-6 max-w-[20ch] text-white">Describe the shop. Read the code.</h2>
+            <h2 className="mt-6 max-w-[20ch] text-white">Describe the shop. Sell your product.</h2>
             <p className="mt-5 max-w-[440px] text-[15px] text-white/75">
               Sign in with Google or an email address. Your first storefront takes one sentence.
             </p>
