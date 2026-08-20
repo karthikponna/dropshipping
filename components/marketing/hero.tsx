@@ -11,7 +11,7 @@ export function Hero() {
           reduced-motion rule collapses the duration. */}
       <div className="sm-container relative translate-y-0 pt-20 pb-20 text-center opacity-100 blur-[0px] transition-[opacity,transform,filter] delay-[60ms] duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] starting:translate-y-[14px] starting:opacity-0 starting:blur-[14px] md:pt-28 md:pb-28">
         <h1 className="mx-auto max-w-[22ch] text-balance">
-          Describe the shop. Get the storefront<span className="dot">.</span>
+          Describe the shop Get the storefront
         </h1>
 
         <p className="mx-auto mt-6 max-w-[620px] text-[16px]">
