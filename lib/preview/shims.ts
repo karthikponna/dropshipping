@@ -363,14 +363,25 @@ export const SHIM_FILES: Readonly<Record<string, string>> = {
 
 /* ─────────────────────── generated placeholder modules ─────────────────────── */
 
-/** Shown as the page while nothing usable has streamed in yet. */
+/**
+ * Shown as the page while nothing usable has streamed in yet.
+ *
+ * Every colour here is `currentColor` dimmed by opacity, never a literal. The
+ * sandbox's `index.html` paints the body in the *generated* theme, which is the
+ * shop's palette and routinely dark — a hardcoded black spinner and black type
+ * would then be black on black, and the user would watch an empty void for the
+ * length of a generation. Inheriting the theme's own foreground is legible on
+ * any palette the model can produce.
+ */
 export const PLACEHOLDER_PAGE_SOURCE = `export default function PreviewPlaceholder() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-24">
       <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-6 h-11 w-11 animate-spin rounded-full border-2 border-black/10 border-t-black/40" />
-        <h1 className="text-2xl font-semibold tracking-tight text-black/80">Building your page</h1>
-        <p className="mt-2.5 text-base text-black/45">Sections appear here as they are written.</p>
+        {/* The transparent quarter is what makes the spin legible; a ring of
+            uniform opacity looks static however fast it turns. */}
+        <div className="mx-auto mb-6 h-11 w-11 animate-spin rounded-full border-2 border-current border-t-transparent opacity-40" />
+        <h1 className="text-2xl font-semibold tracking-tight opacity-80">Building your page</h1>
+        <p className="mt-2.5 text-base opacity-50">Sections appear here as they are written.</p>
       </div>
     </main>
   );
@@ -381,9 +392,9 @@ function skeletonBody(label: string): string {
   return `  return (
     <section aria-label=${JSON.stringify(`${label} placeholder`)} className="animate-pulse px-6 py-16">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-        <div className="h-7 w-2/5 rounded-md bg-black/10" />
-        <div className="h-4 w-3/5 rounded bg-black/[0.07]" />
-        <div className="h-40 w-full rounded-xl bg-black/[0.04]" />
+        <div className="h-7 w-2/5 rounded-md bg-current opacity-10" />
+        <div className="h-4 w-3/5 rounded bg-current opacity-[0.07]" />
+        <div className="h-40 w-full rounded-xl bg-current opacity-[0.04]" />
       </div>
     </section>
   );`;
