@@ -50,6 +50,8 @@ exist, maps the platform's `$PORT`, and then `exec`s the real binary so
 | `GRAPH_NODE_ID` | `node-0` | |
 | `GRAPH_BOLT_NODE_ADDRESSES` | `node-0=127.0.0.1:7687` | Required even though the app never uses Bolt. |
 | `GRAPH_ADVERTISED_BOLT_ADDR` | `127.0.0.1:7687` | As above. |
+| `PORT` | `8443` | Pins the listener. The image exposes four ports, so leaving Railway to guess can land it on Bolt, which never answers HTTP. |
+| `RAILWAY_RUN_UID` | `0` | Railway-specific. See below. |
 
 Then set these on the **Vercel** project and redeploy:
 
@@ -70,8 +72,14 @@ generation after a quiet period runs with no memory at all.
 **Volume ownership.** The node runs as uid `10001`. An empty volume mounted
 over a path that does not exist in the image is created root-owned and the node
 cannot write to it. The Dockerfile creates `/data` owned by `10001` ahead of the
-mount for this reason. If a host ignores that, the entrypoint fails with a clear
-message rather than starting a node that cannot store anything.
+mount for this reason, which is enough for a plain Docker named volume.
+
+Railway ignores it: it mounts every volume as root whatever the image says, so
+the node crash-loops on `mkdir: cannot create directory '/data/store'`. Railway's
+documented fix is `RAILWAY_RUN_UID=0`, which runs the container as root — worth
+knowing that it gives up the image's unprivileged default, which is a fair trade
+for a demo and worth revisiting for anything long-lived. Pointing
+`CLOUD_PROVIDER` at S3 avoids the volume, and the question, entirely.
 
 **Region.** Put the node near the Vercel functions. Every cross-region hop
 comes out of the same 4-second budget.

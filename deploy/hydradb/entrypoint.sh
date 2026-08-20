@@ -39,7 +39,11 @@ mkdir -p "$(dirname "$TOKEN_FILE")" || fail "cannot create $(dirname "$TOKEN_FIL
 # create it. Only relevant for CLOUD_PROVIDER=local, where it is the whole graph.
 if [ "${CLOUD_PROVIDER:-local}" = "local" ]; then
   : "${LOCAL_PATH:?set LOCAL_PATH to a writable directory, ideally on a mounted volume}"
-  mkdir -p "$LOCAL_PATH" || fail "cannot create LOCAL_PATH=$LOCAL_PATH — is the volume mounted and writable by uid $(id -u)?"
+  mkdir -p "$LOCAL_PATH" ||
+    fail "cannot create LOCAL_PATH=$LOCAL_PATH as uid $(id -u).
+  The volume is mounted but owned by root. Railway mounts every volume as root
+  regardless of the image's user, so set RAILWAY_RUN_UID=0 on the service and
+  redeploy. On other hosts, mount a volume the runtime user can write to."
 fi
 
 if [ -n "${GRAPH_DATA_CACHE_DIR:-}" ]; then
