@@ -128,6 +128,10 @@ export type GenerationMode = "create" | "refine";
 
 export type GenerationPhase =
   | "connecting"
+  /** Reading the memory graph for design and past-project context. */
+  | "recalling"
+  /** Claude querying the graph itself, deciding what this change touches. */
+  | "investigating"
   | "planning"
   | "writing"
   | "repairing"
@@ -159,6 +163,40 @@ export function isRetryableErrorCode(code: GenerationErrorCode): boolean {
   return RETRYABLE_ERROR_CODES.includes(code);
 }
 
+/* ──────────────────────────── uploaded images ─────────────────────────── */
+
+/** Storage bucket the composer uploads into. Public: see migration 0003. */
+export const SHOP_ASSETS_BUCKET = "shop-assets";
+
+/** How many images one generation turn may carry. */
+export const MAX_ATTACHMENTS = 6;
+
+/**
+ * An image the user attached in the composer, already uploaded.
+ *
+ * It does two jobs at once, which is why it carries both a URL and a
+ * description: Claude is shown the picture so it can write copy about the real
+ * product and pull the palette off it, and the same URL is what the generated
+ * page points `<img src>` at. That is the whole reason uploads go to a public
+ * bucket rather than travelling as base64 — the exported site has to keep
+ * working on somebody else's server.
+ */
+export interface ImageAsset {
+  /** Stable per attachment, minted client-side. */
+  id: string;
+  /** Public URL, both for the model and for the generated markup. */
+  url: string;
+  /** Object path inside the bucket, for deletion. */
+  path: string;
+  /** Original file name, shown in the UI and used to name the subject. */
+  name: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  /** Bytes after the browser downscaled it. */
+  size: number;
+}
+
 /** POST body of `/api/generate`. */
 export interface GenerateRequestBody {
   pageType: PageType;
@@ -169,7 +207,192 @@ export interface GenerateRequestBody {
   /** Existing tree to diff against in `refine` mode. */
   baseFiles?: FileMap;
   baseTheme?: Theme;
+  /** Images the user attached to this turn, already in the bucket. */
+  attachments?: ImageAsset[];
+  /**
+   * Groups the generations of one sitting so the memory graph can tell "these
+   * were built together" from "these were built weeks apart". The client mints
+   * it and reuses it for the lifetime of the tab.
+   */
+  sessionId?: string;
 }
+
+/* ─────────────────────────────── memory ──────────────────────────────── */
+
+/**
+ * Something the HydraDB graph contributed to this run, surfaced so the user can
+ * see why the model already knew something — silent memory reads as a bug.
+ */
+export interface MemoryNotice {
+  kind: "inherited-design" | "recalled-project" | "narrowed-context" | "consulted-graph";
+  /** One line for the chat rail, e.g. "Matching your landing page's design." */
+  message: string;
+  /** Supporting detail: matched concepts, the source page, the file count. */
+  detail?: string;
+  /** Set for `recalled-project`, so the UI can link to what was remembered. */
+  projectId?: string;
+}
+
+/**
+ * One earlier turn of the current sitting, read back out of the graph.
+ *
+ * The generation stream carries no transcript, so by the fourth or tenth
+ * instruction this is the only record of what "that section" refers to. It is
+ * a plain type here rather than in `lib/hydra` so the prompt builders can
+ * render it without importing the graph client.
+ */
+export interface SessionTurn {
+  versionId: string;
+  pageType: PageType;
+  /** What the user asked for, clipped to 1000 characters at ingest. */
+  prompt: string;
+  mode: string;
+  /** The shop name that turn produced. */
+  name: string;
+  summary: string;
+  createdAt: number;
+}
+
+/** A component of one page as the graph knows it: metadata, never source. */
+export interface InventoryEntry {
+  /** Graph node id, so a caller can traverse IMPORTS without a second lookup. */
+  id: number;
+  path: string;
+  name: string;
+  purpose: string;
+  isEntry: boolean;
+  isClient: boolean;
+  lineCount: number;
+}
+
+/** One page of a shop from an earlier sitting, as the graph knows it. */
+export interface PastShopPage {
+  pageType: PageType;
+  /** Newest generation of this page — the key to its row in `versions`. */
+  versionId: string;
+  /** Epoch ms that generation was written. This is what "yesterday" means. */
+  builtAt: number;
+  /** How many times this page has been generated or refined. */
+  generations: number;
+}
+
+/**
+ * A shop from an earlier sitting, listed for the model to choose between.
+ *
+ * Recall answers "which past shop is this prompt about" with one project and a
+ * theme. This is the wider view, and it exists for one reason recall cannot
+ * cover: a user saying "the same as yesterday" is pointing at a date, so the
+ * dates have to be in front of the model rather than folded into a ranking.
+ */
+export interface PastShop {
+  projectId: string;
+  name: string;
+  summary: string;
+  /** Epoch ms the project was last touched. */
+  updatedAt: number;
+  pages: PastShopPage[];
+}
+
+/** One file of a past shop, read back out of Postgres for the model to adapt. */
+export interface RecalledSource {
+  path: string;
+  contents: string;
+}
+
+/** The slice of a past shop's source a create turn decided to build on. */
+export interface RecalledCode {
+  projectId: string;
+  /**
+   * The shop the source actually came from, which is not always the one recall
+   * named: the investigation gets the whole list and can reasonably disagree,
+   * so anything shown to the user has to be labelled from here rather than from
+   * the recall notice printed a moment earlier.
+   */
+  name: string;
+  pageType: PageType;
+  sources: readonly RecalledSource[];
+}
+
+/**
+ * What Claude worked out for itself before a generation was written.
+ *
+ * The investigation turn is given the graph as tools and asked what this change
+ * needs; this is what it came back with. `contextPaths` is the important part on
+ * a refinement — it is the set of files the model chose to open, which is a far
+ * better answer to "what does this change touch" than matching the instruction
+ * against component names, because the model read the session history first.
+ * `recalledCode` is its counterpart on a create turn that reaches backwards:
+ * the components of an earlier shop the new page is to be modelled on.
+ */
+export interface Investigation {
+  /** The model's own brief, handed to the writing turn verbatim. */
+  plan: string;
+  /** Files it opened, and therefore the files the writing turn is shown. */
+  contextPaths: string[] | null;
+  /** Session turns it was able to see, for the writing turn to reuse. */
+  history: readonly SessionTurn[];
+  /** How many tool calls it made, for the notice in the chat rail. */
+  toolCalls: number;
+  /** Source it opened out of an earlier shop, on a create turn. */
+  recalledCode?: RecalledCode | null;
+}
+
+/** The design language of a page already in this project, carried to a new one. */
+export interface InheritedDesignContext {
+  sourcePageType: PageType;
+  theme: Theme;
+  shopName: string;
+  summary: string;
+  /** Section component names of the source page. */
+  sections: string[];
+  /**
+   * The source page's header and footer, verbatim. Present so this page can
+   * reuse the shop's chrome as code rather than reconstruct it from a
+   * description — the only way two independent turns end up with the same
+   * contact address and the same returns window.
+   */
+  chrome?: readonly RecalledSource[];
+}
+
+/** A shop from an earlier session that the current prompt is referring to. */
+export interface RecalledProjectContext {
+  projectId: string;
+  name: string;
+  summary: string;
+  theme: Theme;
+  matchedConcepts: string[];
+  /** The phrase that dated it, e.g. "yesterday". */
+  timePhrase: string | null;
+  updatedAt: number;
+  /**
+   * Components of that shop, read back out of Postgres by the investigation.
+   *
+   * Absent unless the model actually went and opened them. The theme contract
+   * alone answers "the same colours"; only source answers "the same UI", which
+   * is the difference between recalling a palette and recalling a page.
+   */
+  sources?: readonly RecalledSource[];
+  /** Which page of that shop the source came from. */
+  sourcePageType?: PageType;
+}
+
+/**
+ * Everything the memory graph contributed to one run, resolved before the model
+ * is called. Kept as plain data so the prompt builders and the pipeline stay
+ * free of any HydraDB import — the same separation the Anthropic SDK gets.
+ */
+export interface GenerationMemory {
+  inherited: InheritedDesignContext | null;
+  recalled: RecalledProjectContext | null;
+  /** Files the IMPORTS walk narrowed a refinement to, or null for all of them. */
+  contextPaths: string[] | null;
+}
+
+export const EMPTY_GENERATION_MEMORY: GenerationMemory = {
+  inherited: null,
+  recalled: null,
+  contextPaths: null,
+};
 
 /**
  * One frame of the generation stream. The route serialises these as NDJSON
@@ -177,6 +400,7 @@ export interface GenerateRequestBody {
  */
 export type GenerationEvent =
   | { type: "status"; phase: GenerationPhase; message?: string }
+  | { type: "memory"; memory: MemoryNotice }
   | { type: "meta"; meta: GenerationMeta }
   | { type: "theme"; theme: Theme }
   | { type: "file_start"; path: string }
@@ -283,6 +507,8 @@ export interface ChatMessage {
   status?: ChatMessageStatus;
   errorCode?: GenerationErrorCode;
   retryable?: boolean;
+  /** Images sent with a user turn, rendered as thumbnails under the message. */
+  attachments?: readonly ImageAsset[];
 }
 
 /* ──────────────────────── database row contracts ─────────────────────── */
@@ -298,7 +524,13 @@ export interface ProfileRecord {
   updated_at: string;
 }
 
-/** `public.projects`. */
+/**
+ * `public.projects`.
+ *
+ * A project is a whole shop, not a single page: it can hold a landing page and
+ * a product page at once, each with its own version history and its own pointer
+ * below. `page_type` is only the page the builder opens on.
+ */
 export interface ProjectRecord {
   id: string;
   user_id: string;
@@ -306,14 +538,17 @@ export interface ProjectRecord {
   page_type: PageType;
   initial_prompt: string;
   current_version_id: string | null;
+  landing_version_id: string | null;
+  product_version_id: string | null;
   created_at: string;
   updated_at: string;
 }
 
-/** `public.versions` — one row per generation, `idx` starts at 1. */
+/** `public.versions` — one row per generation, `idx` starts at 1 per page type. */
 export interface VersionRecord {
   id: string;
   project_id: string;
+  page_type: PageType;
   idx: number;
   prompt: string;
   files: FileMap;
@@ -325,6 +560,23 @@ export interface VersionRecord {
 export interface ProjectWithVersion extends ProjectRecord {
   current_version: VersionRecord | null;
 }
+
+/** The newest version of each page type, for booting the builder. */
+export type ProjectPages = Record<PageType, VersionRecord | null>;
+
+/** Which page types a project has actually generated. */
+export function builtPageTypes(project: ProjectRecord): PageType[] {
+  const built: PageType[] = [];
+  if (project.landing_version_id) built.push("landing");
+  if (project.product_version_id) built.push("product");
+  return built;
+}
+
+/** The column on `projects` that points at a page type's newest version. */
+export const PAGE_TYPE_POINTER: Record<PageType, "landing_version_id" | "product_version_id"> = {
+  landing: "landing_version_id",
+  product: "product_version_id",
+};
 
 /** Row shape for the version-history drawer (files omitted for weight). */
 export type VersionSummary = Omit<VersionRecord, "files" | "theme">;

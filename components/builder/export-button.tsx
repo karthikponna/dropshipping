@@ -19,10 +19,13 @@ import { buildProjectZipBlob, exportFileName } from "@/lib/export/project-zip";
 import type { FileMap, PageType, Theme } from "@/lib/types";
 
 export interface ExportButtonProps {
-  /** Canonical Next.js tree to export. An empty tree disables the button. */
-  files: FileMap;
+  /**
+   * One canonical Next.js tree per page of the shop. A shop with both pages
+   * exports as one app — landing at `/`, product at `/product` — so the download
+   * is the whole site rather than whichever page happened to be open.
+   */
+  pages: Partial<Record<PageType, FileMap>>;
   theme?: Theme | null;
-  pageType?: PageType;
   name?: string;
   summary?: string;
   prompt?: string;
@@ -50,9 +53,8 @@ const BUTTON_CLASS = [
 ].join(" ");
 
 export function ExportButton({
-  files,
+  pages,
   theme,
-  pageType,
   name,
   summary,
   prompt,
@@ -84,7 +86,10 @@ export function ExportButton({
     }, RESET_DELAY_MS);
   }, []);
 
-  const isEmpty = Object.keys(files).length === 0;
+  const pageCount = Object.values(pages).filter(
+    (tree) => tree !== undefined && Object.keys(tree).length > 0,
+  ).length;
+  const isEmpty = pageCount === 0;
   const isDisabled = disabled || isEmpty || phase === "working";
 
   const download = useCallback(async (): Promise<void> => {
@@ -92,7 +97,7 @@ export function ExportButton({
     setError(null);
 
     try {
-      const blob = await buildProjectZipBlob({ files, theme, pageType, name, summary, prompt });
+      const blob = await buildProjectZipBlob({ pages, theme, name, summary, prompt });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.download = exportFileName(name);
@@ -107,10 +112,15 @@ export function ExportButton({
     } catch (cause) {
       settle("failed", cause instanceof Error ? cause.message : "Could not build the zip.");
     }
-  }, [files, name, pageType, prompt, settle, summary, theme]);
+  }, [name, pages, prompt, settle, summary, theme]);
 
   const label = LABELS[phase];
-  const title = phase === "failed" && error !== null ? error : "Download this project as a zip";
+  const title =
+    phase === "failed" && error !== null
+      ? error
+      : pageCount > 1
+        ? "Download the whole shop as a zip — both pages, one Next.js app"
+        : "Download this project as a zip";
 
   return (
     <>

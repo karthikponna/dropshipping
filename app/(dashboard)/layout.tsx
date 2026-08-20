@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { resolveAvatarUrl } from "@/lib/auth/avatar";
 import { dashboardFontVariables } from "@/lib/fonts";
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -18,16 +19,22 @@ export default async function DashboardLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const configured = isSupabaseConfigured();
   let email: string | null = null;
+  let avatarUrl: string | null = null;
 
   if (configured) {
     const user = await getCurrentUser();
     if (!user) redirect("/login");
     email = user.email ?? null;
+    avatarUrl = resolveAvatarUrl(user);
   }
 
   return (
     <div className={`amb-scope ${dashboardFontVariables} min-h-dvh`}>
-      <DashboardShell email={email} notice={configured ? null : SUPABASE_SETUP_HINT}>
+      <DashboardShell
+        avatarUrl={avatarUrl}
+        email={email}
+        notice={configured ? null : SUPABASE_SETUP_HINT}
+      >
         {children}
       </DashboardShell>
     </div>

@@ -7,37 +7,49 @@ import { AUTH_ACTION_INITIAL_STATE } from "@/lib/types";
 
 import { AuthError, AuthField } from "./auth-card";
 import { SplitSubmit } from "./buttons";
+import { AuthDivider, GoogleButton } from "./google-button";
 
-/** Email/password sign-in. `next` carries the path the middleware bounced from. */
-export function LoginForm({ next }: { next?: string }) {
+/**
+ * Sign in with Google or with an email and password. `next` carries the path
+ * the middleware bounced from; `authError` carries a failure from the OAuth
+ * callback, which redirects here because it has no page of its own.
+ */
+export function LoginForm({ next, authError }: { next?: string; authError?: string }) {
   const [state, formAction, pending] = useActionState(signInAction, AUTH_ACTION_INITIAL_STATE);
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
-      {next ? <input type="hidden" name="next" value={next} /> : null}
+    <div className="flex flex-col gap-5">
+      {authError ? <AuthError message={authError} /> : null}
 
-      {state.error ? <AuthError message={state.error} /> : null}
+      <GoogleButton label="Continue with Google" next={next} />
+      <AuthDivider />
 
-      <AuthField
-        id="login-email"
-        name="email"
-        label="Email"
-        type="email"
-        autoComplete="email"
-        placeholder="you@example.com"
-        required
-      />
+      <form action={formAction} className="flex flex-col gap-5">
+        {next ? <input type="hidden" name="next" value={next} /> : null}
 
-      <AuthField
-        id="login-password"
-        name="password"
-        label="Password"
-        type="password"
-        autoComplete="current-password"
-        required
-      />
+        {state.error ? <AuthError message={state.error} /> : null}
 
-      <SplitSubmit label="Log in" pendingLabel="Signing in" pending={pending} className="mt-1" />
-    </form>
+        <AuthField
+          id="login-email"
+          name="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          required
+        />
+
+        <AuthField
+          id="login-password"
+          name="password"
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          required
+        />
+
+        <SplitSubmit label="Log in" pendingLabel="Signing in" pending={pending} className="mt-1" />
+      </form>
+    </div>
   );
 }

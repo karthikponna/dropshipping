@@ -11,6 +11,8 @@
  * app, so it is written against the sandbox's React 19 + esbuild toolchain.
  */
 
+import { PREVIEW_NAVIGATE_MESSAGE } from "./navigation";
+
 /** Directory (relative to the sandbox root) that holds every injected module. */
 export const SHIM_DIR = "shims";
 
@@ -283,6 +285,72 @@ const fonts: Record<string, FontLoader> = new Proxy({} as Record<string, FontLoa
 export default fonts;
 `;
 
+/**
+ * Module that turns an in-site link click into a route change outside. Exported
+ * extension-less as well, since the sandbox root imports it by specifier.
+ */
+export const PREVIEW_NAVIGATION_MODULE = `${SHIM_DIR}/preview-navigation`;
+
+export const PREVIEW_NAVIGATION_SHIM = `${PREVIEW_NAVIGATION_MODULE}.ts`;
+
+/**
+ * The sandbox half of preview navigation.
+ *
+ * The generated markup uses plain `<a href="/product">` — the engineering rules
+ * forbid next/link — so shimming a component is not enough; the listener has to
+ * be on the document. It runs in the capture phase and only for a left click
+ * with no modifier on an anchor whose href starts with a slash, which leaves
+ * fragment anchors scrolling natively and modified clicks alone.
+ *
+ * The message goes to both `parent` and `top`: Sandpack's preview sits inside
+ * its own wrapper frame, so the app's window is not reliably one hop up.
+ */
+const PREVIEW_NAVIGATION_SOURCE = `const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_NAVIGATE_MESSAGE)};
+
+function anchorFor(target: EventTarget | null): HTMLAnchorElement | null {
+  if (target === null || !(target instanceof Element)) return null;
+  return target.closest("a");
+}
+
+function announce(href: string): void {
+  const payload = { type: MESSAGE_TYPE, href };
+  const seen: Window[] = [];
+
+  for (const candidate of [window.parent, window.top]) {
+    if (!candidate || candidate === window || seen.includes(candidate)) continue;
+    seen.push(candidate);
+    try {
+      candidate.postMessage(payload, "*");
+    } catch {
+      // A frame we cannot reach is not worth failing a click over.
+    }
+  }
+}
+
+/** Installs the interceptor. Safe to call more than once per document. */
+export default function installPreviewNavigation(): void {
+  if (typeof document === "undefined") return;
+
+  document.addEventListener(
+    "click",
+    (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const anchor = anchorFor(event.target);
+      const href = anchor?.getAttribute("href") ?? "";
+      // Only same-origin paths: "#pricing" scrolls, "https://…" is somebody
+      // else's site, "//host" is protocol-relative and therefore external.
+      if (!href.startsWith("/") || href.startsWith("//")) return;
+
+      event.preventDefault();
+      announce(href);
+    },
+    true,
+  );
+}
+`;
+
 /** Every injected module, keyed by its path relative to the sandbox root. */
 export const SHIM_FILES: Readonly<Record<string, string>> = {
   [`${SHIM_DIR}/next-image.tsx`]: NEXT_IMAGE_SOURCE,
@@ -290,6 +358,7 @@ export const SHIM_FILES: Readonly<Record<string, string>> = {
   [`${SHIM_DIR}/next-navigation.ts`]: NEXT_NAVIGATION_SOURCE,
   [`${SHIM_DIR}/next-headers.ts`]: NEXT_HEADERS_SOURCE,
   [NEXT_FONT_SHIM]: NEXT_FONT_SOURCE,
+  [PREVIEW_NAVIGATION_SHIM]: PREVIEW_NAVIGATION_SOURCE,
 };
 
 /* ─────────────────────── generated placeholder modules ─────────────────────── */
@@ -299,9 +368,9 @@ export const PLACEHOLDER_PAGE_SOURCE = `export default function PreviewPlacehold
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-24">
       <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-6 h-9 w-9 animate-spin rounded-full border-2 border-black/10 border-t-black/40" />
-        <h1 className="text-lg font-semibold tracking-tight text-black/80">Building your page</h1>
-        <p className="mt-2 text-sm text-black/45">Sections appear here as they are written.</p>
+        <div className="mx-auto mb-6 h-11 w-11 animate-spin rounded-full border-2 border-black/10 border-t-black/40" />
+        <h1 className="text-2xl font-semibold tracking-tight text-black/80">Building your page</h1>
+        <p className="mt-2.5 text-base text-black/45">Sections appear here as they are written.</p>
       </div>
     </main>
   );

@@ -1,5 +1,9 @@
 import { resolveAnthropicKey } from "@/lib/anthropic-key";
-import { createAnthropicClient, streamAssistantText, toGenerationError } from "@/lib/ai/client";
+import { createAnthropicClient, runToolLoop, streamAssistantText, toGenerationError } from "@/lib/ai/client";
+import { createInvestigator } from "@/lib/ai/investigate";
+import { recallGenerationMemory, rememberGeneration } from "@/lib/ai/memory";
+import { INVESTIGATION_MODEL } from "@/lib/ai/model";
+import { resolvePastWork } from "@/lib/ai/past-project";
 import { persistGeneratedVersion } from "@/lib/ai/persistence";
 import { runGenerationPipeline } from "@/lib/ai/pipeline";
 import { parseGenerateRequestBody } from "@/lib/ai/request";
@@ -105,6 +109,12 @@ export async function POST(request: Request): Promise<Response> {
           signal: abort.signal,
           streamText: (params) => streamAssistantText({ client, ...params }),
           persist: persistGeneratedVersion,
+          recall: recallGenerationMemory,
+          investigate: createInvestigator(
+            (params) => runToolLoop({ client, model: INVESTIGATION_MODEL, ...params }),
+            resolvePastWork,
+          ),
+          remember: rememberGeneration(body),
         });
       } catch (error) {
         write(toGenerationError(error).toEvent());

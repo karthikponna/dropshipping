@@ -114,8 +114,28 @@ export function ChatMessageView({ message, onRetry, busy = false }: ChatMessageV
   }
 
   if (message.role === "user") {
+    const attachments = message.attachments ?? [];
+
     return (
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-1.5">
+        {attachments.length > 0 ? (
+          <ul className="flex max-w-[88%] flex-wrap justify-end gap-1.5">
+            {attachments.map((asset) => (
+              <li key={asset.id}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- a bucket
+                    object, unknown at build time. */}
+                <img
+                  alt={asset.name}
+                  className="h-16 w-16 rounded-amb-row border border-amb-border object-cover"
+                  height={64}
+                  src={asset.url}
+                  title={asset.name}
+                  width={64}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <p className="max-w-[88%] rounded-amb-panel bg-amb-secondary px-3 py-2 text-[13px] leading-[1.5] whitespace-pre-wrap text-amb-foreground">
           {message.content}
         </p>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { listProjects } from "@/lib/dashboard/data";
+import { isSchemaOutdated, listProjects, MIGRATION_HINT } from "@/lib/dashboard/data";
 import { formatCount } from "@/lib/dashboard/format";
 import { ProjectCard } from "@/components/dashboard/project-card";
 import { ProjectsEmptyState } from "@/components/dashboard/projects-empty-state";
@@ -11,6 +11,12 @@ export const metadata: Metadata = { title: "Projects" };
 export default async function ProjectsPage() {
   const projects = await listProjects();
   const configured = isSupabaseConfigured();
+
+  const notice = !configured
+    ? SUPABASE_SETUP_HINT
+    : projects.length === 0 && (await isSchemaOutdated())
+      ? MIGRATION_HINT
+      : null;
 
   return (
     <div className="px-4 pt-8 pb-16 sm:px-6 lg:px-8">
@@ -25,7 +31,7 @@ export default async function ProjectsPage() {
 
       <div className="mt-8">
         {projects.length === 0 ? (
-          <ProjectsEmptyState notice={configured ? null : SUPABASE_SETUP_HINT} />
+          <ProjectsEmptyState notice={notice} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => (

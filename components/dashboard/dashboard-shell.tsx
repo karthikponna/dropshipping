@@ -9,6 +9,8 @@ import { Topbar } from "./topbar";
 interface DashboardShellProps {
   children: React.ReactNode;
   email: string | null;
+  /** Provider profile picture; `null` for email/password accounts. */
+  avatarUrl?: string | null;
   /** Setup warning rendered above the content column, e.g. missing env vars. */
   notice?: string | null;
 }
@@ -22,7 +24,7 @@ interface DashboardShellProps {
  * else is above it — a setup notice, say — instead of guessing at the offset
  * with `calc(100dvh - ...)` and hanging its composer below the fold.
  */
-export function DashboardShell({ children, email, notice }: DashboardShellProps) {
+export function DashboardShell({ children, email, avatarUrl, notice }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -43,7 +45,7 @@ export function DashboardShell({ children, email, notice }: DashboardShellProps)
   return (
     <div className="flex h-dvh overflow-hidden">
       <aside className="hidden h-full w-amb-sidebar shrink-0 flex-col border-r border-amb-sidebar-border bg-amb-sidebar sm:flex">
-        <SidebarRail email={email} />
+        <SidebarRail />
       </aside>
 
       {menuOpen && (
@@ -55,7 +57,7 @@ export function DashboardShell({ children, email, notice }: DashboardShellProps)
             className="absolute inset-0 bg-black/20"
           />
           <div className="relative flex h-full w-amb-sidebar max-w-[86%] flex-col border-r border-amb-sidebar-border bg-amb-sidebar shadow-amb-xl">
-            <SidebarRail email={email} onClose={() => setMenuOpen(false)} />
+            <SidebarRail onClose={() => setMenuOpen(false)} />
           </div>
         </div>
       )}
@@ -66,7 +68,7 @@ export function DashboardShell({ children, email, notice }: DashboardShellProps)
             {notice}
           </p>
         )}
-        <Topbar email={email} onOpenMenu={() => setMenuOpen(true)} />
+        <Topbar avatarUrl={avatarUrl} email={email} onOpenMenu={() => setMenuOpen(true)} />
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>

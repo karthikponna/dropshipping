@@ -4,12 +4,12 @@ import { useEffect, useRef } from "react";
 
 import { CloseIcon } from "@/components/dashboard/icons";
 import { cx, formatRelativeTime } from "@/lib/dashboard/format";
-import type { VersionSummary } from "@/lib/types";
+import { PAGE_TYPE_LABELS, type PageType, type VersionSummary } from "@/lib/types";
 
 import { AlertIcon, RestoreIcon } from "./icons";
 
 /**
- * Version history, newest first, with restore.
+ * Version history for one page of the shop, newest first, with restore.
  *
  * Restoring does not generate anything: it repoints `projects.current_version_id`
  * at an older row through `PATCH /api/projects/[id]` and reloads that row's files
@@ -21,7 +21,10 @@ import { AlertIcon, RestoreIcon } from "./icons";
 export interface VersionHistoryProps {
   open: boolean;
   onClose: () => void;
+  /** Versions of the page on screen; the caller filters by page type. */
   versions: readonly VersionSummary[];
+  /** Which page these versions belong to, for the header. */
+  pageType: PageType;
   currentVersionId: string | null;
   /** Id of the version being restored right now, if any. */
   restoringId: string | null;
@@ -33,6 +36,7 @@ export function VersionHistory({
   open,
   onClose,
   versions,
+  pageType,
   currentVersionId,
   restoringId,
   error,
@@ -74,7 +78,9 @@ export function VersionHistory({
       >
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-amb-border px-4">
           <div>
-            <h3 className="text-[15px]">Version history</h3>
+            <h3 className="text-[15px]">
+              {PAGE_TYPE_LABELS[pageType]} history
+            </h3>
             <p className="text-[12px] text-amb-muted-foreground">
               {versions.length === 0
                 ? "No versions saved yet."

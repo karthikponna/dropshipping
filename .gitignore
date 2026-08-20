@@ -30,6 +30,9 @@ yarn-error.log*
 .env.production.local
 !.env.example
 
+# local HydraDB node: its graph store, cache and auth token
+/.hydradb/
+
 # vercel
 .vercel
 

@@ -4,14 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cx } from "@/lib/dashboard/format";
-import {
-  BrandMark,
-  ChevronRightIcon,
-  CloseIcon,
-  HomeIcon,
-  PagesIcon,
-  SettingsIcon,
-} from "./icons";
+import { BrandMark, CloseIcon, HomeIcon, PagesIcon, SettingsIcon } from "./icons";
 import { SignOutButton } from "./sign-out-button";
 
 interface NavItem {
@@ -36,15 +29,19 @@ function isActive(pathname: string, item: NavItem): boolean {
 }
 
 interface SidebarRailProps {
-  email: string | null;
   /** Supplied only in the mobile drawer, where the rail can be dismissed. */
   onClose?: () => void;
 }
 
-/** The 255px rail: brand row, workspace row, nav, then the sign-out control. */
-export function SidebarRail({ email, onClose }: SidebarRailProps) {
+/**
+ * The 255px rail: brand row, nav, then the sign-out control.
+ *
+ * It deliberately says nothing about who is signed in — that moved to the
+ * account menu behind the topbar avatar, so the rail is navigation and nothing
+ * else.
+ */
+export function SidebarRail({ onClose }: SidebarRailProps) {
   const pathname = usePathname();
-  const initial = email?.trim().charAt(0).toUpperCase() ?? "D";
 
   return (
     <>
@@ -65,38 +62,6 @@ export function SidebarRail({ email, onClose }: SidebarRailProps) {
             <CloseIcon />
           </button>
         )}
-      </div>
-
-      <div className="px-2">
-        <Link
-          href="/dashboard/settings"
-          className="relative flex h-9 items-center gap-2 rounded-amb-control bg-amb-card pr-2.5 pl-2 text-[14px]"
-        >
-          <svg
-            className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <rect
-              x="0.125"
-              y="0.125"
-              width="calc(100% - 0.25px)"
-              height="calc(100% - 0.25px)"
-              rx="9.875"
-              fill="none"
-              stroke="#E6E6E6"
-              strokeWidth="0.25"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amb-accent text-[10px] font-medium text-amb-foreground">
-            {initial}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-left text-amb-foreground">
-            {email ?? "Your workspace"}
-          </span>
-          <ChevronRightIcon className="h-3.5 w-3.5 text-amb-muted-foreground" />
-        </Link>
       </div>
 
       <nav className="flex flex-1 flex-col gap-[2px] overflow-y-auto px-2 pt-3 pb-11">

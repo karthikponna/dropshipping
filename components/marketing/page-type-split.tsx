@@ -14,9 +14,9 @@ const DETAIL: Record<PageType, { bestFor: string; highlights: readonly string[] 
   landing: {
     bestFor: "The shop itself. One scroll that pitches, proves and closes.",
     highlights: [
-      "Hero pitch, benefit cards and pricing tiers in a single scroll",
+      "Hero pitch and benefit cards in a single scroll",
       "Proof section and a closing conversion band before the footer",
-      "Sticky nav anchored to the sections it generated",
+      "Every call to action links straight through to the product page",
     ],
   },
   product: {
@@ -40,17 +40,11 @@ export function PageTypeSplit() {
       className="scroll-mt-[57px] border-y border-sm-border-light bg-sm-bg-alt"
     >
       <div className="sm-container sm-section">
-        <SectionRail label="Page types" index={2} total={4} />
+        <SectionRail label="Page types" index={2} total={3} />
 
-        <div className="mt-10 grid gap-6 md:grid-cols-[1fr_auto] md:items-end md:gap-10">
-          <h2 className="max-w-[20ch]">
-            Two page types. Each one a contract<span className="dot">.</span>
-          </h2>
-          <p className="max-w-[420px] text-[15px] md:text-right">
-            The page type is not a hint in the prompt. Each type carries its own required file list,
-            and a tree that misses one is not finished.
-          </p>
-        </div>
+        <h2 className="mt-10 max-w-[20ch]">
+          Two page types. Each one a contract<span className="dot">.</span>
+        </h2>
 
         <div
           role="group"

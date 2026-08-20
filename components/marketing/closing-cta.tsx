@@ -5,7 +5,7 @@ import { Eyebrow, SectionRail } from "./eyebrow";
 import { DotGrid } from "./frame";
 
 const NEXT_STEPS = [
-  "Create an account with an email and a password",
+  "Create an account with Google, or an email and a password",
   "Describe the shop you want to sell",
   "Pick a landing page or a product page",
   "Watch the files land, then refine or export",
@@ -14,7 +14,7 @@ const NEXT_STEPS = [
 export function ClosingCta() {
   return (
     <section className="sm-container sm-section">
-      <SectionRail label="Start" index={4} total={4} />
+      <SectionRail label="Start" index={3} total={3} />
 
       <div className="relative isolate mt-10 overflow-hidden bg-sm-blue text-white">
         <DotGrid tone="white" />
@@ -26,7 +26,7 @@ export function ClosingCta() {
             </Eyebrow>
             <h2 className="mt-6 max-w-[20ch] text-white">Describe the shop. Read the code.</h2>
             <p className="mt-5 max-w-[440px] text-[15px] text-white/75">
-              Email and password, no OAuth. Your first storefront takes one sentence.
+              Sign in with Google or an email address. Your first storefront takes one sentence.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-5">

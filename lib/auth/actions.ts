@@ -8,7 +8,9 @@ import { SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import type { AuthActionState } from "@/lib/types";
 
 /**
- * Email/password auth only — there is no OAuth provider anywhere in this app.
+ * The email/password half of auth. Google runs entirely client-side and lands
+ * in /auth/callback, so it has no server action here — only `signOutAction` is
+ * shared between the two.
  *
  * All three actions match React's `useActionState` shape:
  *   (prevState: AuthActionState, formData: FormData) => Promise<AuthActionState>

@@ -29,6 +29,7 @@ import {
   NEXT_FONT_SPECIFIERS,
   NEXT_MODULE_SHIMS,
   PLACEHOLDER_PAGE_SOURCE,
+  PREVIEW_NAVIGATION_MODULE,
   SANDBOX_PACKAGES,
   SHIM_DIR,
   SHIM_FILES,
@@ -223,7 +224,12 @@ export default function App() {
 const ROOT_INDEX_SOURCE = `import { createRoot } from "react-dom/client";
 
 import App from "./App";
+import installPreviewNavigation from "./${PREVIEW_NAVIGATION_MODULE}";
 import "./styles.css";
+
+// The sandbox renders one route; a click on a link to the other one is reported
+// out to the panel, which switches the tree being previewed.
+installPreviewNavigation();
 
 const container = document.getElementById("root");
 

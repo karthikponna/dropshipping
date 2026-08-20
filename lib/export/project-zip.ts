@@ -23,14 +23,20 @@
  * node test.
  */
 
+import { PAGE_ROUTES, PAGE_ROUTE_SEGMENTS, pageTypeForHref } from "@/lib/framework/routes";
 import type { FileMap, PageType, Theme } from "@/lib/types";
 import { PAGE_TYPE_LABELS, THEME_FILE_NAME, normalizeTheme } from "@/lib/types";
 
 /* ──────────────────────────────── contract ──────────────────────────────── */
 
 export interface ExportProjectInput {
-  /** The canonical Next.js tree from the generator. */
-  files: FileMap;
+  /** The canonical Next.js tree from the generator, for a single-page export. */
+  files?: FileMap;
+  /**
+   * One tree per page type, for a shop that has both. Takes precedence over
+   * `files`: the landing page becomes `/` and the product page `/product`.
+   */
+  pages?: Partial<Record<PageType, FileMap>>;
   theme?: Theme | null;
   pageType?: PageType;
   /** Shop / project name, used for the folder, the package name and the README. */
@@ -77,13 +83,13 @@ const ZIP_ENTRY_DATE = new Date("2024-01-01T00:00:00.000Z");
  * scaffold needed to boot it. Pure, total and deterministic.
  */
 export function buildExportFileTree(input: ExportProjectInput): FileMap {
-  const generated = sanitizeFiles(input.files);
+  const { generated, pageTypes, shared } = resolveTrees(input);
   const theme = normalizeTheme(input.theme ?? parseThemeFile(generated[THEME_FILE_NAME]));
   const tokens = tokensFor(theme);
 
   const name = cleanLine(input.name, 80) || DEFAULT_NAME;
   const summary = cleanLine(input.summary, 200);
-  const pageType: PageType = input.pageType === "product" ? "product" : "landing";
+  const pageType: PageType = pageTypes[0] ?? (input.pageType === "product" ? "product" : "landing");
   const slug = exportProjectSlug(name);
 
   const merged: FileMap = { ...generated };
@@ -93,21 +99,403 @@ export function buildExportFileTree(input: ExportProjectInput): FileMap {
   };
 
   write(ENTRY_PATH, fallbackPageSource(name, summary));
+
+  // Every call to action on a landing page points at /product, so exporting a
+  // shop whose product page has not been built yet would ship its main
+  // conversion path as a 404. A holding route keeps those links honest, and
+  // disappears the moment the real page exists — `write` never overwrites.
+  const pending = pendingRoutes(pageTypes);
+  for (const route of pending) {
+    write(`app/${SECONDARY_ROUTES[route]}/page.tsx`, pendingRouteSource(name, route));
+  }
+
   write("app/layout.tsx", layoutSource(name, summary, tokens));
   write("app/globals.css", globalsSource(tokens));
   write("package.json", packageJsonSource(slug, summary));
   write("tsconfig.json", TSCONFIG_SOURCE);
-  write("next.config.ts", NEXT_CONFIG_SOURCE);
+  write("next.config.ts", nextConfigSource(remoteImageHosts(generated)));
   write("postcss.config.mjs", POSTCSS_CONFIG_SOURCE);
   write("next-env.d.ts", NEXT_ENV_SOURCE);
   write(".gitignore", GITIGNORE_SOURCE);
   write(THEME_FILE_NAME, `${JSON.stringify(theme, null, 2)}\n`);
   write(
     "README.md",
-    readmeSource({ name, summary, pageType, prompt: input.prompt, files: merged }),
+    readmeSource({
+      name,
+      summary,
+      pageType,
+      pageTypes,
+      pending,
+      shared,
+      prompt: input.prompt,
+      files: merged,
+    }),
   );
 
   return sortKeys(merged);
+}
+
+/* ─────────────────────────── multi-page merging ─────────────────────────── */
+
+/**
+ * Route prefix a secondary page is mounted at. The landing page owns `/`
+ * because that is what a visitor lands on; anything else gets a segment.
+ *
+ * Read from `lib/framework/routes.ts` rather than declared here: the prompts
+ * tell the model to write `href="/product"`, so the segment the product page
+ * lands in is not a free choice.
+ */
+const SECONDARY_ROUTES: Record<PageType, string> = PAGE_ROUTE_SEGMENTS;
+
+/**
+ * Resolves the input into one tree plus the page types it contains.
+ *
+ * The two page frameworks both emit `app/page.tsx`, `components/Navbar.tsx` and
+ * `components/Footer.tsx`, so a shop with both pages cannot simply have its
+ * trees merged — one would silently overwrite the other. The secondary page is
+ * therefore relocated wholesale into its own route segment and its own component
+ * folder, with its imports rewritten to match — except for the chrome the two
+ * pages agree on, which is emitted once and imported by both.
+ */
+function resolveTrees(input: ExportProjectInput): {
+  generated: FileMap;
+  pageTypes: PageType[];
+  shared: string[];
+} {
+  const supplied: [PageType, FileMap][] = [];
+
+  for (const pageType of ["landing", "product"] as const) {
+    const tree = sanitizeFiles(input.pages?.[pageType]);
+    if (Object.keys(tree).length > 0) supplied.push([pageType, tree]);
+  }
+
+  if (supplied.length === 0) {
+    return {
+      generated: sanitizeFiles(input.files),
+      pageTypes: input.files && Object.keys(input.files).length > 0
+        ? [input.pageType === "product" ? "product" : "landing"]
+        : [],
+      shared: [],
+    };
+  }
+
+  // A single page always lives at the root, whichever page it is.
+  const [firstEntry] = supplied;
+  if (supplied.length === 1 && firstEntry) {
+    return { generated: firstEntry[1], pageTypes: [firstEntry[0]], shared: [] };
+  }
+
+  const primary = supplied.find(([pageType]) => pageType === "landing") ?? firstEntry;
+  if (!primary) return { generated: {}, pageTypes: [], shared: [] };
+
+  const generated: FileMap = { ...primary[1] };
+  const pageTypes: PageType[] = [primary[0]];
+  const shared = new Map<string, string>();
+
+  for (const [pageType, tree] of supplied) {
+    if (pageType === primary[0]) continue;
+    pageTypes.push(pageType);
+
+    for (const [path, contents] of shareableChrome(
+      primary[1],
+      tree,
+      PAGE_ROUTES[primary[0]],
+      PAGE_ROUTES[pageType],
+    )) {
+      // Replaces the primary's own copy: same component, with the route it is
+      // rendered on no longer baked in.
+      generated[path] = contents;
+      shared.set(path, contents);
+    }
+
+    const relocated = relocate(tree, SECONDARY_ROUTES[pageType], new Set(shared.keys()));
+    for (const [path, contents] of Object.entries(relocated)) {
+      if (path in generated) continue;
+      generated[path] = contents;
+    }
+  }
+
+  return { generated, pageTypes, shared: [...shared.keys()].sort() };
+}
+
+/* ──────────────────────────────── shared chrome ─────────────────────────── */
+
+/** Files both page types write at the same path, in the order a page renders them. */
+const SHARED_CHROME_PATHS: readonly string[] = ["components/Navbar.tsx", "components/Footer.tsx"];
+
+/** Leading whitespace is captured so a rewritten attribute keeps its indentation. */
+const CLASS_NAME_RE = /(\s+)className="([^"]*)"/;
+const ARIA_CURRENT_RE = /(\s+)aria-current="([^"]*)"/;
+const ROUTE_ANCHOR_SLOT = "\u0000route-anchor\u0000";
+const DEFAULT_EXPORT_OPEN = /export default function\s+[A-Za-z_$][\w$]*\s*\([^)]*\)\s*\{/;
+
+/**
+ * One copy of the chrome for the whole shop.
+ *
+ * A product turn now edits the landing page's actual `Navbar.tsx` and
+ * `Footer.tsx` rather than being told to write matching ones, so the two copies
+ * usually arrive identical — at which point relocating the second one into
+ * `components/product/` ships the same component twice in the artifact somebody
+ * downloads. Where the pair can be reconciled it is written once at the root and
+ * both routes import it from there.
+ *
+ * The navbar is the one file that differs for a legitimate reason: whichever link
+ * points at the route being rendered carries `aria-current` and a heavier style.
+ * Picking a copy would mis-mark one of the two routes, so that difference is
+ * resolved by deriving the route at runtime instead.
+ *
+ * Anything differing beyond those attributes falls through to the old
+ * de-confliction. A project generated before this contract existed, or a product
+ * page refined on its own, has two genuinely different navbars, and dropping
+ * either one's work is worse than shipping both.
+ */
+function shareableChrome(
+  primary: FileMap,
+  secondary: FileMap,
+  primaryRoute: string,
+  secondaryRoute: string,
+): Map<string, string> {
+  const shared = new Map<string, string>();
+
+  for (const path of SHARED_CHROME_PATHS) {
+    const ours = primary[path];
+    const theirs = secondary[path];
+    if (typeof ours !== "string" || typeof theirs !== "string") continue;
+
+    // A sibling importing "./Navbar" would be left pointing at a file that is no
+    // longer beside it once the rest of the folder moves.
+    const name = chromeName(path);
+    if (name === null || importsRelatively(secondary, name) || importsRelatively(primary, name)) {
+      continue;
+    }
+
+    if (ours === theirs) {
+      shared.set(path, ours);
+      continue;
+    }
+
+    const merged = mergeRouteAwareChrome(ours, theirs, primaryRoute, secondaryRoute);
+    if (merged !== null) shared.set(path, merged);
+  }
+
+  return shared;
+}
+
+/** `components/Navbar.tsx` → `Navbar`. */
+function chromeName(path: string): string | null {
+  const match = /^components\/([A-Za-z_$][\w$]*)\.tsx$/.exec(path);
+  return match?.[1] ?? null;
+}
+
+function importsRelatively(files: FileMap, name: string): boolean {
+  const pattern = new RegExp(`from\\s*["']\\.{1,2}/${name}["']`);
+  return Object.values(files).some((contents) => pattern.test(contents));
+}
+
+/** A component split into its links to the shop's own routes and the text between them. */
+function splitRouteAnchors(source: string): { template: string; anchors: string[] } {
+  const anchors: string[] = [];
+
+  const template = source.replace(/<a\b[^>]*>/g, (tag) => {
+    const href = /\shref="([^"]*)"/.exec(tag)?.[1];
+    if (href === undefined || pageTypeForHref(href) === null) return tag;
+    anchors.push(tag);
+    return ROUTE_ANCHOR_SLOT;
+  });
+
+  return { template, anchors };
+}
+
+/**
+ * The two copies reconciled into one component that reads the route it is on,
+ * or `null` when they differ by more than which link is current.
+ */
+function mergeRouteAwareChrome(
+  primarySource: string,
+  secondarySource: string,
+  primaryRoute: string,
+  secondaryRoute: string,
+): string | null {
+  if (primarySource.includes(ROUTE_ANCHOR_SLOT) || secondarySource.includes(ROUTE_ANCHOR_SLOT)) {
+    return null;
+  }
+
+  const ours = splitRouteAnchors(primarySource);
+  const theirs = splitRouteAnchors(secondarySource);
+
+  // A difference anywhere but inside a link to one of the shop's routes is this
+  // page's own business, not a per-route difference, so there is nothing to
+  // derive and the pair is left alone.
+  if (ours.template !== theirs.template || ours.anchors.length !== theirs.anchors.length) {
+    return null;
+  }
+
+  const resolved: string[] = [];
+  let derived = 0;
+
+  for (const [index, tag] of ours.anchors.entries()) {
+    const other = theirs.anchors[index];
+    if (other === undefined) return null;
+
+    if (tag === other) {
+      resolved.push(tag);
+      continue;
+    }
+
+    // A link's own href says which route it is the current one for, so the copy
+    // from that route is the one whose styling means "you are here".
+    const route = /\shref="([^"]*)"/.exec(tag)?.[1];
+    if (route === undefined || route !== /\shref="([^"]*)"/.exec(other)?.[1]) return null;
+    if (route !== primaryRoute && route !== secondaryRoute) return null;
+
+    const active = route === primaryRoute ? tag : other;
+    const inactive = route === primaryRoute ? other : tag;
+
+    const merged = mergeAnchorTag(active, inactive, route);
+    if (merged === null) return null;
+
+    resolved.push(merged);
+    derived += 1;
+  }
+
+  if (derived === 0) return null;
+
+  const parts = ours.template.split(ROUTE_ANCHOR_SLOT);
+  const body = parts.map((part, index) => `${part}${resolved[index] ?? ""}`).join("");
+
+  return asRouteAwareComponent(body);
+}
+
+/** One link, with the attributes that vary by route turned into expressions. */
+function mergeAnchorTag(active: string, inactive: string, route: string): string | null {
+  // An expression className cannot be compared as text, so there is no way to
+  // tell an active style from a difference that matters.
+  if (active.includes("className={") || inactive.includes("className={")) return null;
+
+  // Everything the two copies say beyond "you are here" has to agree, or merging
+  // would drop half of it.
+  if (withoutRouteState(active) !== withoutRouteState(inactive)) return null;
+
+  const condition = `pathname === ${JSON.stringify(route)}`;
+  const activeClass = CLASS_NAME_RE.exec(active)?.[2];
+  const inactiveClass = CLASS_NAME_RE.exec(inactive)?.[2];
+  let tag = active;
+
+  if (activeClass !== inactiveClass) {
+    if (activeClass === undefined || inactiveClass === undefined) return null;
+    tag = tag.replace(
+      CLASS_NAME_RE,
+      (_match, space: string) =>
+        `${space}className={${condition} ? ${JSON.stringify(activeClass)} : ${JSON.stringify(inactiveClass)}}`,
+    );
+  }
+
+  const activeAria = ARIA_CURRENT_RE.exec(active)?.[2];
+  if (activeAria !== ARIA_CURRENT_RE.exec(inactive)?.[2]) {
+    const value = JSON.stringify(activeAria ?? "page");
+    tag = ARIA_CURRENT_RE.test(tag)
+      ? tag.replace(
+          ARIA_CURRENT_RE,
+          (_match, space: string) => `${space}aria-current={${condition} ? ${value} : undefined}`,
+        )
+      : tag.replace(
+          /\s*\/?>$/,
+          (close) => ` aria-current={${condition} ? ${value} : undefined}${close}`,
+        );
+  }
+
+  return tag;
+}
+
+function withoutRouteState(tag: string): string {
+  return tag.replace(CLASS_NAME_RE, " ").replace(ARIA_CURRENT_RE, " ").replace(/\s+/g, " ");
+}
+
+/**
+ * The merged component, reading its route from the router.
+ *
+ * `usePathname` rather than a prop: the call sites are model-written JSX in two
+ * different `app/page.tsx` files, and rewriting both to pass an argument is more
+ * ways to be wrong than synthesising one hook here. The cost is that the chrome
+ * becomes a client component, which for a header carrying a cart control is
+ * where it was heading anyway.
+ */
+function asRouteAwareComponent(source: string): string | null {
+  const opening = DEFAULT_EXPORT_OPEN.exec(source);
+  // Already route-aware, so whatever the two copies disagree about is not this.
+  if (!opening || source.includes("usePathname")) return null;
+
+  const bodyStart = opening.index + opening[0].length;
+  const withHook = `${source.slice(0, bodyStart)}\n  const pathname = usePathname();\n${source.slice(bodyStart)}`;
+
+  const importLine = 'import { usePathname } from "next/navigation";\n';
+  const directive = /^\s*(["'])use client\1;?[ \t]*\r?\n?/.exec(withHook);
+  if (directive) {
+    const end = directive[0].length;
+    return `${withHook.slice(0, end)}\n${importLine}${withHook.slice(end)}`;
+  }
+
+  return `"use client";\n\n${importLine}\n${withHook}`;
+}
+
+/**
+ * Routes this export links to but has no page for.
+ *
+ * Only ever the secondary routes of a shop that has its landing page: without
+ * one, whichever page exists owns `/` and there is nothing pointing elsewhere.
+ */
+function pendingRoutes(present: readonly PageType[]): PageType[] {
+  if (!present.includes("landing")) return [];
+  return (Object.keys(SECONDARY_ROUTES) as PageType[])
+    .filter((pageType) => pageType !== "landing" && !present.includes(pageType))
+    .sort();
+}
+
+/** Moves a page's tree under `app/<segment>/` and `components/<segment>/`. */
+function relocate(files: FileMap, segment: string, shared: ReadonlySet<string>): FileMap {
+  const moved: FileMap = {};
+  const sharedNames = new Set([...shared].map(chromeName).filter((name) => name !== null));
+
+  for (const [path, contents] of Object.entries(files)) {
+    // The root layout and the theme belong to the project, not to one page.
+    if (path === "app/layout.tsx" || path === "app/globals.css" || path === THEME_FILE_NAME) {
+      continue;
+    }
+    // One copy of this already lives at the root, for both routes to import.
+    if (shared.has(path)) continue;
+
+    const target = path.startsWith("app/")
+      ? `app/${segment}/${path.slice("app/".length)}`
+      : path.startsWith("components/")
+        ? `components/${segment}/${path.slice("components/".length)}`
+        : null;
+
+    if (target === null) continue;
+    moved[target] = rewriteComponentImports(contents, segment, sharedNames);
+  }
+
+  return moved;
+}
+
+/**
+ * Repoints `@/components/Hero` at `@/components/product/Hero`, leaving the
+ * shared chrome pointing at the root copy.
+ *
+ * Relative imports need no rewriting: the whole component folder moves
+ * together, so `./Hero` still resolves to its neighbour.
+ */
+function rewriteComponentImports(
+  source: string,
+  segment: string,
+  sharedNames: ReadonlySet<string>,
+): string {
+  return source.replace(
+    /(["'])@\/components\/(?!(?:landing|product)\/)([\w$.-]*)/g,
+    (match, quote: string, name: string) =>
+      sharedNames.has(name.replace(/\.tsx?$/, ""))
+        ? match
+        : `${quote}@/components/${segment}/${name}`,
+  );
 }
 
 /**
@@ -428,6 +816,49 @@ function fallbackPageSource(name: string, summary: string): string {
 `;
 }
 
+/**
+ * A route the rest of the shop links to but which was never generated.
+ *
+ * Written against the theme utilities in `globals.css` rather than hard-coded
+ * colours, so it reads as part of the shop it is standing in for.
+ */
+function pendingRouteSource(name: string, pageType: PageType): string {
+  const label = PAGE_TYPE_LABELS[pageType].toLowerCase();
+
+  return `/**
+ * ${PAGE_ROUTES[pageType]} — a real route with nothing behind it yet.
+ *
+ * This shop's ${label} had not been generated when the project was exported,
+ * and the other pages link here. Replace this file (and add its components) to
+ * finish the route; nothing else needs changing.
+ */
+export default function Page() {
+  return (
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 px-6 py-24 text-center">
+      <p className="text-sm uppercase tracking-[0.2em] text-muted">${escapeJsxText(name)}</p>
+      <h1 className="font-heading text-4xl font-semibold tracking-tight">
+        The ${label} is on its way
+      </h1>
+      <p className="max-w-md text-base text-muted">
+        This route is part of the shop, but the page has not been built yet.
+      </p>
+      <a
+        className="mt-2 inline-flex items-center rounded-[var(--radius)] bg-primary px-5 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+        href="/"
+      >
+        Back to the shop
+      </a>
+    </main>
+  );
+}
+`;
+}
+
+/** Model-supplied text going into JSX children rather than an attribute. */
+function escapeJsxText(value: string): string {
+  return value.replace(/[{}<>]/g, " ").replace(/\s+/g, " ").trim();
+}
+
 /* ──────────────────────────── scaffold: manifests ───────────────────────── */
 
 function packageJsonSource(slug: string, summary: string): string {
@@ -477,20 +908,47 @@ const TSCONFIG_SOURCE = `${JSON.stringify(
 )}\n`;
 
 /**
- * picsum.photos is whitelisted because generated components sometimes reach for
- * next/image, and Next refuses to render a remote host it has not been told
- * about. Costs nothing when the code uses a plain <img>, which is the norm.
+ * Every https host the generated markup loads an image from.
+ *
+ * picsum.photos is always there for the placeholders; a shop built from
+ * uploaded photos also points at the Supabase storage host they were uploaded
+ * to, which is not known until export time. Next refuses to render a remote
+ * host through next/image that it has not been told about, so both have to be
+ * declared even though the generated code normally uses a plain <img>.
  */
-const NEXT_CONFIG_SOURCE = `import type { NextConfig } from "next";
+function remoteImageHosts(files: FileMap): string[] {
+  const hosts = new Set<string>(["picsum.photos"]);
+  const url = /https:\/\/([a-z0-9.-]+\.[a-z]{2,})\/[^\s"'`)]*/gi;
+
+  for (const contents of Object.values(files)) {
+    for (const [href, host] of contents.matchAll(url)) {
+      const looksLikeAnImage =
+        /\.(png|jpe?g|webp|avif|gif|svg)($|\?)/i.test(href) || href.includes("/storage/v1/object/");
+      if (host && looksLikeAnImage) hosts.add(host.toLowerCase());
+    }
+  }
+
+  return [...hosts].sort();
+}
+
+function nextConfigSource(hosts: readonly string[]): string {
+  const patterns = hosts
+    .map((hostname) => `      { protocol: "https", hostname: "${hostname}" },`)
+    .join("\n");
+
+  return `import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "picsum.photos" }],
+    remotePatterns: [
+${patterns}
+    ],
   },
 };
 
 export default nextConfig;
 `;
+}
 
 const POSTCSS_CONFIG_SOURCE = `const config = {
   plugins: {
@@ -521,19 +979,39 @@ interface ReadmeInput {
   name: string;
   summary: string;
   pageType: PageType;
+  /** Every page in this export, in route order. */
+  pageTypes: readonly PageType[];
+  /** Routes that exist as a holding page because they were never generated. */
+  pending: readonly PageType[];
+  /** Chrome written once and imported by every route. */
+  shared: readonly string[];
   prompt?: string;
   files: FileMap;
 }
 
-function readmeSource({ name, summary, pageType, prompt, files }: ReadmeInput): string {
+function readmeSource({
+  name,
+  summary,
+  pageType,
+  pageTypes,
+  pending,
+  shared,
+  prompt,
+  files,
+}: ReadmeInput): string {
   const label = PAGE_TYPE_LABELS[pageType].toLowerCase();
   const componentPaths = Object.keys(files)
     .filter((path) => path.startsWith("components/"))
     .sort();
 
+  const description =
+    pageTypes.length > 1
+      ? `A ${pageTypes.map((type) => PAGE_TYPE_LABELS[type].toLowerCase()).join(" and a ")} generated by DropShipping, sharing one design system.`
+      : `A ${label} generated by DropShipping.`;
+
   const sections: string[] = [
     `# ${name}`,
-    summary.length > 0 ? summary : `A ${label} generated by DropShipping.`,
+    summary.length > 0 ? summary : description,
     `This is a plain Next.js 15 project — App Router, TypeScript, Tailwind CSS v4 — with no
 DropShipping runtime dependency. Edit it, deploy it or throw it away; nothing here
 phones home.`,
@@ -558,6 +1036,49 @@ light — add it yourself if you want linting.`,
     sections.push(`## The prompt it came from\n\n${quoted}`);
   }
 
+  if (pageTypes.length > 1 || pending.length > 0) {
+    const rows = [
+      ...pageTypes.map((type, index) =>
+        index === 0
+          ? `| \`/\` | ${PAGE_TYPE_LABELS[type]} | \`app/page.tsx\` |`
+          : `| \`/${SECONDARY_ROUTES[type]}\` | ${PAGE_TYPE_LABELS[type]} | \`app/${SECONDARY_ROUTES[type]}/page.tsx\` |`,
+      ),
+      ...pending.map(
+        (type) =>
+          `| \`/${SECONDARY_ROUTES[type]}\` | ${PAGE_TYPE_LABELS[type]} — not built yet | \`app/${SECONDARY_ROUTES[type]}/page.tsx\` |`,
+      ),
+    ].join("\n");
+
+    const chrome =
+      shared.length > 0
+        ? `\n\nThe chrome is shared rather than duplicated: ${shared
+            .map((path) => `\`${path}\``)
+            .join(" and ")} ${shared.length > 1 ? "are" : "is"} written once and imported by
+every route. Whichever navigation link points at the route being rendered marks itself with
+\`aria-current\`, which is why it reads the path from \`usePathname()\` instead of hard-coding
+it. Edit it once and every page follows.`
+        : "";
+
+    const note =
+      pending.length > 0
+        ? `The pages that were generated share one palette, type scale and corner radius, so they
+read as one shop. The route marked *not built yet* is a holding page: the rest of the site
+links to it, so it exists rather than 404ing. Replace that file when you build the page for
+real. Each page keeps its own section components: the landing page's live in \`components/\`,
+and every other page has its own folder beside them.${chrome}`
+        : `Both pages were generated against the same palette, type scale and corner radius, so
+they read as one shop. Each page keeps its own section components: the landing page's live in
+\`components/\`, and every other page has its own folder beside them.${chrome}`;
+
+    sections.push(`## Routes
+
+| Route | Page | Entry |
+| --- | --- | --- |
+${rows}
+
+${note}`);
+  }
+
   const layout = [
     "| Path | What it is |",
     "| --- | --- |",
@@ -575,11 +1096,26 @@ Tailwind v4 has no \`tailwind.config.js\`: the theme lives in \`app/globals.css\
 \`@theme\` block, which is also where the colours and fonts from \`theme.json\` were compiled
 to. Change a value there and every utility that uses it follows.`);
 
-  sections.push(`## Images
+  const uploaded = remoteImageHosts(files).filter((host) => host !== "picsum.photos");
+
+  sections.push(
+    uploaded.length > 0
+      ? `## Images
+
+Photos you uploaded are served from your Supabase storage bucket (\`${uploaded.join("`, `")}\`),
+and the bucket is public so this site keeps working wherever you deploy it. **The images
+disappear if you delete that bucket or the Supabase project** — to cut the dependency,
+download them into \`public/\` and point the \`src\` attributes at the local paths.
+
+Anything you did not upload points at [picsum.photos](https://picsum.photos), which serves a
+stable random photo per seed. Those are placeholders; swap them for real photography before
+you put this in front of customers.`
+      : `## Images
 
 Every image points at [picsum.photos](https://picsum.photos), which serves a stable random
 photo per seed. They are placeholders — swap the URLs for real product photography before
-you put this in front of customers.`);
+you put this in front of customers.`,
+  );
 
   return `${sections.join("\n\n")}\n`;
 }

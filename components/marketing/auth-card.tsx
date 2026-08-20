@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthShowcase } from "./auth-showcase";
 import { cx } from "./cx";
 import { Eyebrow, MonoLabel } from "./eyebrow";
 import { CornerFrame, DotGrid } from "./frame";
@@ -8,6 +9,11 @@ import { Logo } from "./logo";
 /**
  * Centred auth card sitting inside a dashed blueprint frame. Shared by
  * /login and /signup so the two pages cannot drift apart.
+ *
+ * `showcase` adds the halftone panel beside the card on large screens. It is
+ * opt-in rather than automatic: signup's job is to get out of the way, and two
+ * pages that both open with a full-height animation would make the switch
+ * between them feel like a page reload.
  */
 export function AuthShell({
   eyebrow,
@@ -15,28 +21,43 @@ export function AuthShell({
   subtitle,
   children,
   footer,
+  showcase = false,
 }: {
   eyebrow: string;
   title: React.ReactNode;
   subtitle: string;
   children: React.ReactNode;
   footer: React.ReactNode;
+  showcase?: boolean;
 }) {
   return (
     <div className="relative isolate flex min-h-dvh flex-col overflow-hidden">
       <DotGrid />
 
       <header className="relative border-b border-sm-border-light bg-white/85 backdrop-blur-[6px]">
-        <div className="sm-container flex h-[57px] items-center justify-between gap-4">
+        <div className="sm-container flex h-[57px] items-center gap-4">
           <Link href="/" aria-label="DropShipping home">
             <Logo />
           </Link>
-          <MonoLabel>Email + password · no oauth</MonoLabel>
         </div>
       </header>
 
-      <main className="relative flex flex-1 items-center justify-center px-4 py-12 md:py-16">
-        <div className="w-full max-w-[452px]">
+      <main
+        className={cx(
+          "relative flex flex-1 px-4 py-12 md:py-16",
+          showcase
+            ? "mx-auto w-full max-w-[1180px] items-stretch justify-center gap-10 lg:gap-14"
+            : "items-center justify-center",
+        )}
+      >
+        {showcase ? <AuthShowcase /> : null}
+
+        <div
+          className={cx(
+            "w-full max-w-[452px]",
+            showcase ? "flex shrink-0 flex-col justify-center" : null,
+          )}
+        >
           <CornerFrame className="p-2.5">
             <div className="border border-sm-border bg-white p-6 sm:p-8">
               <Eyebrow marker>{eyebrow}</Eyebrow>

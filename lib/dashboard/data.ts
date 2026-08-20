@@ -5,6 +5,7 @@ import {
   isPageType,
   normalizeTheme,
   type FileMap,
+  type ProjectPages,
   type ProjectRecord,
   type ProjectWithVersion,
   type VersionRecord,
@@ -39,7 +40,7 @@ export async function getDashboardSession(): Promise<DashboardSession> {
 /* ─────────────────────────────── projects ─────────────────────────────── */
 
 export const PROJECT_COLUMNS =
-  "id, user_id, name, page_type, initial_prompt, current_version_id, created_at, updated_at";
+  "id, user_id, name, page_type, initial_prompt, current_version_id, landing_version_id, product_version_id, created_at, updated_at";
 
 /** `projects` as PostgREST returns it: `page_type` is still a plain string. */
 export interface ProjectRow {
@@ -49,6 +50,8 @@ export interface ProjectRow {
   page_type: string;
   initial_prompt: string;
   current_version_id: string | null;
+  landing_version_id: string | null;
+  product_version_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -66,6 +69,10 @@ export function toProjectRecord(row: ProjectRow): ProjectRecord {
     page_type: isPageType(row.page_type) ? row.page_type : "landing",
     initial_prompt: row.initial_prompt,
     current_version_id: row.current_version_id,
+    // Null-coalesced rather than assumed present: a project created before
+    // migration 0002 ran still answers reads, it just has no page pointers yet.
+    landing_version_id: row.landing_version_id ?? null,
+    product_version_id: row.product_version_id ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -94,8 +101,28 @@ export async function listProjects(): Promise<ProjectListItem[]> {
   }));
 }
 
-/** One project with the version it is currently previewing. */
-export async function getProjectWithVersion(id: string): Promise<ProjectWithVersion | null> {
+export const MIGRATION_HINT =
+  "This database predates the multi-page migration, so reads are failing. Paste supabase/migrations/0002_page_types.sql into the Supabase SQL editor and run it.";
+
+/**
+ * True when the database is still on the 0001 schema.
+ *
+ * Worth one extra round trip only when a read came back empty: PostgREST
+ * rejects a select naming a column that does not exist, so an un-migrated
+ * database looks exactly like an account with no projects — and telling
+ * somebody their shops are gone when they are not is the worst thing this page
+ * could do.
+ */
+export async function isSchemaOutdated(): Promise<boolean> {
+  const session = await getDashboardSession();
+  if (session.status !== "ready") return false;
+
+  const { error } = await session.supabase.from("versions").select("page_type").limit(1);
+  return error?.code === "42703";
+}
+
+/** One project row, without loading any of its versions. */
+export async function getProject(id: string): Promise<ProjectRecord | null> {
   const session = await getDashboardSession();
   if (session.status !== "ready") return null;
 
@@ -106,8 +133,17 @@ export async function getProjectWithVersion(id: string): Promise<ProjectWithVers
     .maybeSingle();
 
   if (error || !data) return null;
+  return toProjectRecord(data as unknown as ProjectRow);
+}
 
-  const project = toProjectRecord(data as unknown as ProjectRow);
+/** One project with the version it is currently previewing. */
+export async function getProjectWithVersion(id: string): Promise<ProjectWithVersion | null> {
+  const session = await getDashboardSession();
+  if (session.status !== "ready") return null;
+
+  const project = await getProject(id);
+  if (!project) return null;
+
   const version = project.current_version_id
     ? await getVersion(session.supabase, project.current_version_id)
     : null;
@@ -117,10 +153,14 @@ export async function getProjectWithVersion(id: string): Promise<ProjectWithVers
 
 /* ─────────────────────────────── versions ─────────────────────────────── */
 
+export const VERSION_COLUMNS = "id, project_id, page_type, idx, prompt, files, theme, created_at";
+export const VERSION_SUMMARY_COLUMNS = "id, project_id, page_type, idx, prompt, created_at";
+
 /** `versions` as PostgREST returns it: `files`/`theme` are untyped jsonb. */
 export interface VersionRow {
   id: string;
   project_id: string;
+  page_type: string;
   idx: number;
   prompt: string;
   files: unknown;
@@ -128,7 +168,8 @@ export interface VersionRow {
   created_at: string;
 }
 
-function toFileMap(value: unknown): FileMap {
+/** Coerces the `files` jsonb into a `FileMap`, dropping anything unexpected. */
+export function toFileMap(value: unknown): FileMap {
   if (typeof value !== "object" || value === null) return {};
 
   const files: FileMap = {};
@@ -142,6 +183,7 @@ export function toVersionRecord(row: VersionRow): VersionRecord {
   return {
     id: row.id,
     project_id: row.project_id,
+    page_type: isPageType(row.page_type) ? row.page_type : "landing",
     idx: row.idx,
     prompt: row.prompt,
     files: toFileMap(row.files),
@@ -153,12 +195,28 @@ export function toVersionRecord(row: VersionRow): VersionRecord {
 async function getVersion(supabase: SupabaseClient, id: string): Promise<VersionRecord | null> {
   const { data, error } = await supabase
     .from("versions")
-    .select("id, project_id, idx, prompt, files, theme, created_at")
+    .select(VERSION_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
   if (error || !data) return null;
   return toVersionRecord(data as unknown as VersionRow);
+}
+
+/**
+ * The newest version of each page type, which is what the builder boots from —
+ * switching pages has to restore a tree without a round trip.
+ */
+export async function getProjectPages(project: ProjectRecord): Promise<ProjectPages> {
+  const session = await getDashboardSession();
+  if (session.status !== "ready") return { landing: null, product: null };
+
+  const [landing, product] = await Promise.all([
+    project.landing_version_id ? getVersion(session.supabase, project.landing_version_id) : null,
+    project.product_version_id ? getVersion(session.supabase, project.product_version_id) : null,
+  ]);
+
+  return { landing, product };
 }
 
 /** History rows for the version drawer — `files`/`theme` omitted for weight. */
@@ -168,12 +226,16 @@ export async function listVersionSummaries(projectId: string): Promise<VersionSu
 
   const { data, error } = await session.supabase
     .from("versions")
-    .select("id, project_id, idx, prompt, created_at")
+    .select(VERSION_SUMMARY_COLUMNS)
     .eq("project_id", projectId)
-    .order("idx", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error || !data) return [];
-  return data as unknown as VersionSummary[];
+
+  return (data as unknown as { page_type: string }[]).map((row) => ({
+    ...(row as unknown as VersionSummary),
+    page_type: isPageType(row.page_type) ? row.page_type : "landing",
+  }));
 }
 
 /* ──────────────────────────────── metrics ─────────────────────────────── */

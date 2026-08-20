@@ -76,6 +76,21 @@ export function FileIcon(props: IconProps) {
   );
 }
 
+/**
+ * Something recalled from the memory graph — three connected nodes, since what
+ * is being surfaced is a relationship rather than a stored value.
+ */
+export function MemoryIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <circle cx="6" cy="17" r="2.4" />
+      <circle cx="18" cy="17" r="2.4" />
+      <circle cx="12" cy="6" r="2.4" />
+      <path d="M10.4 7.9 7.6 15.1M13.6 7.9l2.8 7.2M8.4 17h7.2" />
+    </Glyph>
+  );
+}
+
 /** Chat rail on mobile. */
 export function ChatIcon(props: IconProps) {
   return (
@@ -92,6 +107,36 @@ export function ScreenIcon(props: IconProps) {
     <Glyph {...props}>
       <rect x="3" y="4.5" width="18" height="12" rx="2" />
       <path d="M9 20h6M12 16.5V20" />
+    </Glyph>
+  );
+}
+
+/** Opens the page switcher menu. */
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="m6 9.5 6 6 6-6" />
+    </Glyph>
+  );
+}
+
+/** Attach a photo to the next generation. */
+export function ImagePlusIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M20 13.5V6.5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7.5" />
+      <path d="M4.5 16.5 9 12l3.5 3.5" />
+      <circle cx="14.75" cy="9.25" r="1.25" />
+      <path d="M18 16v5M15.5 18.5h5" />
+    </Glyph>
+  );
+}
+
+/** Remove an attached photo. */
+export function CloseIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
     </Glyph>
   );
 }

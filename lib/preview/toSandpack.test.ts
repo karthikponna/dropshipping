@@ -16,7 +16,15 @@ import assert from "node:assert/strict";
 import type { FileMap } from "@/lib/types";
 import { DEFAULT_THEME } from "@/lib/types";
 
-import { brokenFixture, fixtures, landingFixture, midStreamFixture } from "./fixtures";
+import { PAGE_ROUTES } from "@/lib/framework/routes";
+
+import { brokenFixture, fixtures, landingFixture, midStreamFixture, productFixture } from "./fixtures";
+import {
+  PREVIEW_NAVIGATE_MESSAGE,
+  isPreviewNavigateMessage,
+  previewNavigationTarget,
+} from "./navigation";
+import { PREVIEW_NAVIGATION_MODULE } from "./shims";
 import { SANDPACK_ROOT, toSandpack } from "./toSandpack";
 import type { SandpackProject } from "./toSandpack";
 
@@ -195,7 +203,7 @@ check("mid-stream components are stubbed with skeletons, entry still renders", (
   assert.equal(project.isPlaceholder, false);
   assert.ok(project.files["/components/Navbar.tsx"], "complete component kept");
   // Hero arrived truncated; Features..Footer never arrived. All are stubbed.
-  for (const name of ["Hero", "Features", "Pricing", "Testimonials", "CTA", "Footer"]) {
+  for (const name of ["Hero", "Features", "Testimonials", "CTA", "Footer"]) {
     const path = `/components/${name}.tsx`;
     assert.ok(project.files[path], `expected a stub for ${path}`);
     assert.match(project.files[path], /animate-pulse/, `${path} should be a skeleton`);
@@ -309,6 +317,74 @@ function productFixtureFiles(): FileMap {
   // Imported lazily so the fixture module stays the single source of truth.
   return fixtures[1].files;
 }
+
+/* ───────────────────────── cross-page navigation ────────────────────────── */
+
+check("every project installs the navigation bridge, placeholder included", () => {
+  for (const input of [{ files: landingFixture }, { files: {} }, { files: brokenFixture }]) {
+    const project = toSandpack(input as Parameters<typeof toSandpack>[0]);
+    const bridge = project.files[`/${PREVIEW_NAVIGATION_MODULE}.ts`];
+    assert.ok(bridge, "the bridge module is missing from the sandbox");
+    assert.match(bridge, new RegExp(PREVIEW_NAVIGATE_MESSAGE.replace(/[:-]/g, "\\$&")));
+    assert.match(
+      project.files["/index.tsx"],
+      /installPreviewNavigation\(\);/,
+      "the sandbox root never installs the bridge",
+    );
+  }
+});
+
+check("the fixtures are two routes of one shop, linked both ways", () => {
+  const landing = toSandpack({ files: landingFixture }).files;
+  const product = toSandpack({ files: productFixture }).files;
+
+  // The landing page's conversion path has to reach the product route.
+  const outbound = [landing["/components/Navbar.tsx"], landing["/components/Hero.tsx"], landing["/components/CTA.tsx"]];
+  for (const source of outbound) {
+    assert.ok(source.includes(`"${PAGE_ROUTES.product}"`), "a landing CTA does not link to the product route");
+  }
+  // And the product page has to get back.
+  for (const source of [product["/components/Navbar.tsx"], product["/components/ProductInfo.tsx"]]) {
+    assert.ok(source.includes(`href="${PAGE_ROUTES.landing}"`), "the product page has no way back");
+  }
+  // The chrome is the same markup on both routes apart from what is current.
+  assert.equal(landing["/components/Footer.tsx"], product["/components/Footer.tsx"]);
+  assert.match(landing["/components/Navbar.tsx"], /aria-current="page" [^>]*href="\/"/);
+  assert.match(product["/components/Navbar.tsx"], /aria-current="page" [^>]*href="\/product"/);
+});
+
+check("a navigation message resolves to a route, and nothing else does", () => {
+  assert.equal(previewNavigationTarget({ type: PREVIEW_NAVIGATE_MESSAGE, href: "/" }), "landing");
+  assert.equal(
+    previewNavigationTarget({ type: PREVIEW_NAVIGATE_MESSAGE, href: "/product" }),
+    "product",
+  );
+  // Trailing slashes, queries and fragments are all the same route.
+  for (const href of ["/product/", "/product?variant=2", "/product#specs", "/product/#specs"]) {
+    assert.equal(previewNavigationTarget({ type: PREVIEW_NAVIGATE_MESSAGE, href }), "product", href);
+  }
+
+  const rejected: unknown[] = [
+    undefined,
+    null,
+    "/product",
+    42,
+    {},
+    { type: "sandpack/status" },
+    { type: PREVIEW_NAVIGATE_MESSAGE },
+    { type: PREVIEW_NAVIGATE_MESSAGE, href: 7 },
+    { type: PREVIEW_NAVIGATE_MESSAGE, href: "#pricing" },
+    { type: PREVIEW_NAVIGATE_MESSAGE, href: "/checkout" },
+    { type: PREVIEW_NAVIGATE_MESSAGE, href: "https://example.com/product" },
+    { type: PREVIEW_NAVIGATE_MESSAGE, href: "//example.com/product" },
+  ];
+  for (const data of rejected) {
+    assert.equal(previewNavigationTarget(data), null, JSON.stringify(data) ?? "undefined");
+  }
+
+  assert.equal(isPreviewNavigateMessage({ type: PREVIEW_NAVIGATE_MESSAGE, href: "/x" }), true);
+  assert.equal(isPreviewNavigateMessage({ type: "other", href: "/x" }), false);
+});
 
 /* ───────────────────────────────── report ───────────────────────────────── */
 

@@ -63,9 +63,6 @@ export default async function SettingsPage() {
               {session.user?.email ?? "Not signed in"}
             </dd>
           </dl>
-          <p className="mt-3 text-[13px] text-amb-muted-foreground">
-            Sign out from the bottom of the sidebar.
-          </p>
         </section>
       </div>
     </div>

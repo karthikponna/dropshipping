@@ -1,4 +1,4 @@
-import { renderFrameworkBrief } from "@/lib/framework";
+import { renderFrameworkBrief, renderSiteChromeBrief } from "@/lib/framework";
 import type { GenerationMode, PageType } from "@/lib/types";
 
 /**
@@ -95,20 +95,59 @@ Copy
 - Pick one currency and format every price identically.
 - No claim that would be illegal to make: no invented certifications, no medical promises.`;
 
+/**
+ * Replaces the picsum paragraph of the image rules when the user attached their
+ * own photos.
+ *
+ * The attached images are the actual product, so they outrank anything invented:
+ * they set the palette, they fix what the product looks like, and every claim
+ * about the product has to survive being looked at. Placeholders are still
+ * allowed for the incidental frames — a founder portrait, a lifestyle shot —
+ * because a shop with four sections and two photos looks broken.
+ */
+const ATTACHED_IMAGE_RULES = `Images — the user attached their own photos
+- The attached images are the REAL product. They arrive with this message, above the text, and their URLs are listed there. Look at them before you choose the palette or write a word of copy.
+- Use every attached URL at least once, copied character for character into <img src="...">, at the most prominent place it fits: the hero shot and the gallery come first. Never alter, shorten or re-host a URL, and never invent one in the same style.
+- Describe what you can actually see. Colour, material, finish, shape and what is in the frame all come from the photograph — not from the category. If the photo shows a matte black bottle, the copy does not say "brushed steel".
+- Pull the theme off the photos: the palette should look like it belongs to the product, and background/foreground must still pass as readable body text.
+- Set width and height to the pixel dimensions given for that image so the layout does not jump, use object-cover in fixed frames, and write alt text describing the actual subject.
+- For any image the user did not supply — a lifestyle shot, a founder portrait, a press logo — fall back to https://picsum.photos/seed/<kebab-slug>/<width>/<height>. Unsplash, Pexels, placehold.co and remembered photo IDs stay FORBIDDEN: they 404.
+- Do not import next/image or next/link. Plain <img> and <a> only.`;
+
 /** The shared trunk of the system prompt, including the page-type manifest. */
-export function buildBaseSystemPrompt(pageType: PageType): string {
+export function buildBaseSystemPrompt(pageType: PageType, hasAttachments = false): string {
+  const engineering = hasAttachments ? withAttachedImageRules(ENGINEERING_RULES) : ENGINEERING_RULES;
+
   return [
     ROLE,
     "",
     "## THE BRIEF — this page type is a hard constraint, not a suggestion",
     renderFrameworkBrief(pageType),
     "",
+    "## THE SHOP — one site, two routes",
+    renderSiteChromeBrief(pageType),
+    "",
     OUTPUT_FORMAT,
     "",
     THEME_RULES,
     "",
-    ENGINEERING_RULES,
+    engineering,
   ].join("\n");
+}
+
+/**
+ * Swaps the `Images` paragraph for the attachment version. Two competing sets
+ * of image rules in one prompt is how a model ends up ignoring both, so the
+ * placeholder rules are replaced rather than appended to.
+ */
+function withAttachedImageRules(rules: string): string {
+  const start = rules.indexOf("Images\n");
+  if (start === -1) return [rules, "", ATTACHED_IMAGE_RULES].join("\n");
+
+  const end = rules.indexOf("\n\n", start);
+  return end === -1
+    ? rules.slice(0, start) + ATTACHED_IMAGE_RULES
+    : rules.slice(0, start) + ATTACHED_IMAGE_RULES + rules.slice(end);
 }
 
 const CREATE_MODE = `## THIS TURN: CREATE

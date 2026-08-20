@@ -12,7 +12,17 @@
     "test:ai": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON lib/ai/run-tests.mjs",
     "test:preview": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON lib/preview/run-tests.mjs",
     "test:export": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON lib/export/project-zip.test.mjs",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build",
+    "hydra:up": "bash scripts/hydra-up.sh",
+    "hydra:down": "docker compose -f docker-compose.hydradb.yml down",
+    "hydra:logs": "docker compose -f docker-compose.hydradb.yml logs -f",
+    "hydra:probe": "bash scripts/hydra-probe.sh",
+    "hydra:check": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/hydra-memory-check.mjs",
+    "hydra:trace": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/investigation-trace.mjs",
+    "hydra:trace:cross": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/cross-session-trace.mjs",
+    "supabase:local:up": "bash scripts/supabase-local-up.sh",
+    "supabase:local:down": "npx supabase stop --no-backup",
+    "supabase:local:rls": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/supabase-rls-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",

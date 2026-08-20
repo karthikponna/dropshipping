@@ -5,7 +5,7 @@ import type { GenerationStreamState } from "@/lib/ai/stream-client";
 import { cx } from "@/lib/dashboard/format";
 import type { GenerationPhase } from "@/lib/types";
 
-import { FileIcon, StopIcon } from "./icons";
+import { FileIcon, MemoryIcon, StopIcon } from "./icons";
 
 /**
  * The live turn: what the model is doing right now and which files have landed.
@@ -17,6 +17,8 @@ import { FileIcon, StopIcon } from "./icons";
 
 const PHASE_LABELS: Record<GenerationPhase, string> = {
   connecting: "Connecting to Claude",
+  investigating: "Reading this shop's history",
+  recalling: "Checking what you've built before",
   planning: "Designing the page",
   writing: "Writing components",
   repairing: "Filling in missing files",
@@ -66,6 +68,23 @@ export function StreamActivity({ stream, touched, onCancel }: StreamActivityProp
           Stop
         </button>
       </div>
+
+      {stream.memory.length > 0 ? (
+        <ul className="mt-2.5 space-y-1">
+          {stream.memory.map((notice) => (
+            <li
+              className="flex items-start gap-1.5 rounded-amb-row border border-amb-border bg-amb-background px-2 py-1.5 text-[11px] leading-[1.45] text-amb-muted-foreground"
+              key={`${notice.kind}-${notice.message}`}
+            >
+              <MemoryIcon className="mt-px h-3 w-3 shrink-0 text-amb-info" />
+              <span className="min-w-0">
+                <span className="text-amb-foreground">{notice.message}</span>
+                {notice.detail ? <span className="ml-1">{notice.detail}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {touched.length > 0 ? (
         <ul className="mt-2.5 max-h-52 space-y-0.5 overflow-y-auto">

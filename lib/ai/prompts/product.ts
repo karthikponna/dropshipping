@@ -30,11 +30,18 @@ Commerce detail
 - Reviews opens with an average-rating summary and a count, then 3–4 reviews with author, star rating drawn as inline SVG, a date and a body that mentions the product.
 - Specs is 5–8 label/value rows separated by hairlines in the theme border colour.
 
+Getting back to the rest of the shop
+- The Navbar's wordmark and its "Home" link both point at /, and its "Shop" link at /product is the current route.
+- Above the Gallery, ProductInfo opens with a breadcrumb: <a href="/">the shop name</a> then a separator then the product name as plain text. That is how a visitor who arrived from the landing page gets back.
+- The Footer is the same on this route as on the landing page: wordmark, one-line shop description, a "Shop" column carrying the same two route links in the same order, a "Support" column, and the same copyright line.
+- Add to cart, Buy now, the quantity stepper and the variant chips are <button> elements. They never become anchors and they never navigate.
+
 Out of scope for this page type
-- No pricing tiers, no feature-benefit card grid, no testimonial marketing band, no closing conversion band. Those belong to the landing page.
-- The Navbar carries category links and a cart button with an item count, not marketing anchors.`;
+- No feature-benefit card grid, no testimonial marketing band, no closing conversion band. Those belong to the landing page.
+- No subscription tiers or plan comparison anywhere in the shop. This route shows one product at one price, with variants and quantity — that is the whole pricing story.
+- The Navbar carries the shop's two route links and the cart control, nothing else — no marketing anchors, no section links, no second button.`;
 
 /** Full system prompt for a product-page generation. */
-export function buildProductSystemPrompt(): string {
-  return [buildBaseSystemPrompt("product"), "", PRODUCT_DIRECTION].join("\n");
+export function buildProductSystemPrompt(hasAttachments = false): string {
+  return [buildBaseSystemPrompt("product", hasAttachments), "", PRODUCT_DIRECTION].join("\n");
 }

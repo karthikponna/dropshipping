@@ -1,5 +1,5 @@
-import { GenerationError, isPageType, normalizeTheme } from "@/lib/types";
-import type { FileMap, GenerateRequestBody, GenerationMode, Theme } from "@/lib/types";
+import { GenerationError, MAX_ATTACHMENTS, isPageType, normalizeTheme } from "@/lib/types";
+import type { FileMap, GenerateRequestBody, GenerationMode, ImageAsset, Theme } from "@/lib/types";
 
 /**
  * Validation for the `POST /api/generate` body. Lives here rather than in the
@@ -82,6 +82,15 @@ export function parseGenerateRequestBody(raw: unknown): GenerateRequestBody {
   const baseTheme: Theme | undefined =
     input.baseTheme === undefined || input.baseTheme === null ? undefined : normalizeTheme(input.baseTheme);
 
+  const attachments = parseAttachments(input.attachments);
+
+  // The session id only ever groups nodes in the memory graph, so a malformed
+  // one is dropped rather than rejected: it must never fail a generation.
+  const sessionId =
+    typeof input.sessionId === "string" && input.sessionId.trim().length > 0
+      ? input.sessionId.trim().slice(0, 100)
+      : undefined;
+
   return {
     pageType: input.pageType,
     prompt,
@@ -89,5 +98,83 @@ export function parseGenerateRequestBody(raw: unknown): GenerateRequestBody {
     ...(projectId ? { projectId } : {}),
     ...(baseFiles ? { baseFiles } : {}),
     ...(baseTheme ? { baseTheme } : {}),
+    ...(attachments.length > 0 ? { attachments } : {}),
+    ...(sessionId ? { sessionId } : {}),
   };
+}
+
+/**
+ * Validates the uploaded images a turn carries.
+ *
+ * These URLs end up in two places that make them worth checking properly: an
+ * `<img src>` in code the user will deploy, and a fetch this server performs to
+ * show the picture to Claude. So the host must be the storage origin we
+ * uploaded to — an arbitrary URL here would otherwise turn the generator into a
+ * request forwarder for whatever an attacker wanted fetched.
+ */
+export function parseAttachments(raw: unknown): ImageAsset[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) throw badRequest("attachments must be an array.");
+  if (raw.length > MAX_ATTACHMENTS) {
+    throw badRequest(`attachments may contain at most ${MAX_ATTACHMENTS} images.`);
+  }
+
+  return raw.map((entry, index) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      throw badRequest(`attachments[${index}] must be an object.`);
+    }
+
+    const asset = entry as Record<string, unknown>;
+    const url = typeof asset.url === "string" ? asset.url.trim() : "";
+    if (!isAllowedAssetUrl(url)) {
+      throw badRequest(`attachments[${index}].url must be a shop-assets URL on this project's storage.`);
+    }
+
+    const number = (key: string): number => {
+      const value = asset[key];
+      return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
+    };
+
+    return {
+      id: text(asset.id, 100) || `attachment-${index}`,
+      url,
+      path: text(asset.path, 400),
+      name: text(asset.name, 200) || `image-${index + 1}`,
+      mimeType: text(asset.mimeType, 100) || "image/webp",
+      width: number("width"),
+      height: number("height"),
+      size: number("size"),
+    };
+  });
+}
+
+function text(value: unknown, limit: number): string {
+  return typeof value === "string" ? value.trim().slice(0, limit) : "";
+}
+
+/**
+ * True for a public URL in this project's own storage bucket.
+ *
+ * With Supabase unconfigured there is no origin to compare against, which only
+ * happens when the generator is being driven locally without a database — in
+ * that case any https URL is allowed, because there is no session to abuse.
+ */
+function isAllowedAssetUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+
+  if (url.protocol !== "https:") return false;
+
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!base) return true;
+
+  try {
+    return url.host === new URL(base).host && url.pathname.includes("/shop-assets/");
+  } catch {
+    return false;
+  }
 }

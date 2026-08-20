@@ -9,13 +9,16 @@ import Anthropic, {
 } from "@anthropic-ai/sdk";
 
 import { GenerationError } from "@/lib/types";
+import type { ImageAsset } from "@/lib/types";
 
 import {
   GENERATION_EFFORT,
   GENERATION_MAX_RETRIES,
   GENERATION_MODEL,
   GENERATION_TIMEOUT_MS,
+  INVESTIGATION_EFFORT,
 } from "./model";
+import type { ToolSpec } from "./tools";
 
 /**
  * Thin wrapper over `@anthropic-ai/sdk`: one place that knows how to open a
@@ -41,6 +44,8 @@ export interface StreamTextParams {
   system: string;
   userMessage: string;
   maxTokens: number;
+  /** Images the user attached, shown to the model alongside the text. */
+  images?: readonly ImageAsset[];
   signal?: AbortSignal;
   /** Called with every assistant text delta, in order. */
   onTextDelta: (delta: string) => void;
@@ -52,6 +57,34 @@ export interface StreamTextResult {
 }
 
 /**
+ * Builds the user turn's content.
+ *
+ * Images are referenced by URL rather than uploaded as base64: they already
+ * live in a public bucket because the generated page has to be able to load
+ * them, so sending the bytes a second time would only add a fetch, a buffer and
+ * a third of a megabyte of JSON per photo.
+ *
+ * They go before the text, which is Anthropic's guidance — a model that has
+ * already seen the pictures reads the instructions about them correctly.
+ */
+function buildUserContent(
+  userMessage: string,
+  images: readonly ImageAsset[] | undefined,
+): string | Anthropic.ContentBlockParam[] {
+  if (!images || images.length === 0) return userMessage;
+
+  return [
+    ...images.map(
+      (image): Anthropic.ContentBlockParam => ({
+        type: "image",
+        source: { type: "url", url: image.url },
+      }),
+    ),
+    { type: "text", text: userMessage },
+  ];
+}
+
+/**
  * Streams one assistant turn, forwarding only text deltas. Thinking blocks are
  * ignored on purpose: the parser must never see them.
  */
@@ -60,6 +93,7 @@ export async function streamAssistantText({
   system,
   userMessage,
   maxTokens,
+  images,
   signal,
   onTextDelta,
 }: StreamTextParams): Promise<StreamTextResult> {
@@ -72,7 +106,7 @@ export async function streamAssistantText({
         model: GENERATION_MODEL,
         max_tokens: maxTokens,
         system,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [{ role: "user", content: buildUserContent(userMessage, images) }],
         ...(GENERATION_EFFORT === null ? {} : { output_config: { effort: GENERATION_EFFORT } }),
         stream: true,
       },
@@ -99,6 +133,127 @@ export async function streamAssistantText({
   }
 
   return { stopReason, outputTokens };
+}
+
+/* ───────────────────────────── tool loop ──────────────────────────────── */
+
+export interface ToolLoopParams {
+  client: Anthropic;
+  model: string;
+  system: string;
+  userMessage: string;
+  tools: readonly ToolSpec[];
+  maxTokens: number;
+  maxRounds: number;
+  /** Runs one tool call and returns the JSON the model gets back. */
+  dispatch: (call: { name: string; input: unknown }) => Promise<{ content: string; isError: boolean }>;
+  /** Fires before each call, so the UI can say what is being looked at. */
+  onToolCall?: (name: string, input: unknown) => void;
+  signal?: AbortSignal;
+}
+
+export interface ToolLoopResult {
+  /** The model's final prose, once it stopped calling tools. */
+  text: string;
+  toolCalls: number;
+}
+
+function toAnthropicTools(tools: readonly ToolSpec[]): Anthropic.Tool[] {
+  return tools.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
+  }));
+}
+
+function textOf(content: readonly Anthropic.ContentBlock[]): string {
+  return content
+    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim();
+}
+
+/**
+ * Runs a non-streaming conversation in which the model may call tools.
+ *
+ * Separate from `streamAssistantText` rather than a flag on it, because the two
+ * cannot be the same call. A generation streams because its output *is* the
+ * file protocol — the preview paints from the token stream. A turn that stops
+ * to call a tool would break that protocol mid-file, so investigation happens
+ * first, in full, and only then does the writing turn open its stream.
+ *
+ * The loop always ends with a text turn: if the model is still reaching for
+ * tools when the round budget runs out, one final call with `tool_choice: none`
+ * forces it to commit to what it already knows.
+ */
+export async function runToolLoop({
+  client,
+  model,
+  system,
+  userMessage,
+  tools,
+  maxTokens,
+  maxRounds,
+  dispatch,
+  onToolCall,
+  signal,
+}: ToolLoopParams): Promise<ToolLoopResult> {
+  const wireTools = toAnthropicTools(tools);
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userMessage }];
+
+  let toolCalls = 0;
+  let text = "";
+
+  try {
+    for (let round = 0; round <= maxRounds; round += 1) {
+      const exhausted = round === maxRounds;
+
+      const response = await client.messages.create(
+        {
+          model,
+          max_tokens: maxTokens,
+          system,
+          messages,
+          tools: wireTools,
+          ...(INVESTIGATION_EFFORT === null
+            ? {}
+            : { output_config: { effort: INVESTIGATION_EFFORT } }),
+          ...(exhausted ? { tool_choice: { type: "none" as const } } : {}),
+        },
+        { signal },
+      );
+
+      const said = textOf(response.content);
+      if (said.length > 0) text = said;
+
+      const uses = response.content.filter(
+        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
+      );
+      if (uses.length === 0) break;
+
+      messages.push({ role: "assistant", content: response.content });
+
+      const results: Anthropic.ToolResultBlockParam[] = [];
+      for (const use of uses) {
+        onToolCall?.(use.name, use.input);
+        const outcome = await dispatch({ name: use.name, input: use.input });
+        toolCalls += 1;
+        results.push({
+          type: "tool_result",
+          tool_use_id: use.id,
+          content: outcome.content,
+          is_error: outcome.isError,
+        });
+      }
+
+      messages.push({ role: "user", content: results });
+    }
+  } catch (error) {
+    throw toGenerationError(error);
+  }
+
+  return { text, toolCalls };
 }
 
 /* ──────────────────────────── error mapping ───────────────────────────── */
@@ -151,7 +306,21 @@ export function toGenerationError(error: unknown): GenerationError {
   }
 
   if (error instanceof BadRequestError) {
-    return new GenerationError("upstream_error", `Anthropic rejected the request: ${messageOf(error, "bad request")}`, {
+    const detail = messageOf(error, "bad request");
+
+    // Images are referenced by URL, so Anthropic has to be able to fetch them.
+    // When it cannot, the raw message is about a "source" the user never saw —
+    // name the actual cause instead, which is almost always a bucket that is
+    // not public.
+    if (/image/i.test(detail) && /(url|fetch|download|source)/i.test(detail)) {
+      return new GenerationError(
+        "upstream_error",
+        "Anthropic could not load one of the attached photos. Check that the shop-assets bucket is public, then try again.",
+        { retryable: false, status: 502, cause: error },
+      );
+    }
+
+    return new GenerationError("upstream_error", `Anthropic rejected the request: ${detail}`, {
       retryable: false,
       status: 502,
       cause: error,

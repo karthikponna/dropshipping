@@ -89,6 +89,23 @@ export function LayoutIcon(props: IconProps) {
   );
 }
 
+export function TagIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20.5 13.4 13.4 20.5a2 2 0 0 1-2.8 0l-7.1-7.1V3.5h9.9l7.1 7.1a2 2 0 0 1 0 2.8Z" />
+      <path d="M7.5 7.5h.01" />
+    </Icon>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6 9.5 6 6 6-6" />
+    </Icon>
+  );
+}
+
 export function AlertIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -1,5 +1,4 @@
 import { ClosingCta } from "@/components/marketing/closing-cta";
-import { Features } from "@/components/marketing/features";
 import { Hero } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { PageTypeSplit } from "@/components/marketing/page-type-split";
@@ -14,7 +13,6 @@ export default function MarketingHomePage() {
         <Hero />
         <HowItWorks />
         <PageTypeSplit />
-        <Features />
         <ClosingCta />
       </main>
       <SiteFooter />

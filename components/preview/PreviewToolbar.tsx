@@ -9,6 +9,7 @@ import {
 } from "@/lib/types";
 
 import { DesktopIcon, MobileIcon, TabletIcon } from "./icons";
+import { RouteSwitcher, type RouteSwitcherProps } from "./RouteSwitcher";
 
 const TABS: ReadonlyArray<{ id: PreviewTab; label: string }> = [
   { id: "preview", label: "Preview" },
@@ -32,6 +33,11 @@ export interface PreviewToolbarProps {
   isStreaming?: boolean;
   /** Number of generated files, shown next to the Code tab. */
   fileCount?: number;
+  /**
+   * Which route of the shop is on screen. Omit for a panel that previews a
+   * single tree and has no other route to offer.
+   */
+  routes?: RouteSwitcherProps;
   /** Rendered at the right end — e.g. an Export .zip button from Wave 3. */
   actions?: ReactNode;
 }
@@ -47,6 +53,7 @@ export function PreviewToolbar({
   panelIds,
   isStreaming = false,
   fileCount = 0,
+  routes,
   actions,
 }: PreviewToolbarProps) {
   return (
@@ -83,6 +90,8 @@ export function PreviewToolbar({
           );
         })}
       </div>
+
+      {routes ? <RouteSwitcher {...routes} /> : null}
 
       {tab === "preview" ? (
         <div

@@ -22,6 +22,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { previewNavigationTarget } from "@/lib/preview/navigation";
 import { toSandpack, type SandpackProject } from "@/lib/preview/toSandpack";
 import type { FileMap, PageType, PreviewDevice, PreviewTab, Theme } from "@/lib/types";
 
@@ -30,6 +31,7 @@ import { PreviewErrorBoundary } from "./PreviewErrorBoundary";
 import { PreviewFrame } from "./PreviewFrame";
 import { PreviewEmptyState, PreviewLoadingState } from "./PreviewStates";
 import { PreviewToolbar } from "./PreviewToolbar";
+import type { RouteSwitcherProps } from "./RouteSwitcher";
 import { DEFAULT_STREAM_COMMIT_INTERVAL, useCommittedFiles } from "./useCommittedFiles";
 import { PREVIEW_PANEL_CSS } from "./theme";
 
@@ -48,6 +50,13 @@ export interface PreviewPanelProps {
   pageType?: PageType;
   /** True while a generation streams: throttles commits and shows the indicator. */
   isStreaming?: boolean;
+
+  /**
+   * The shop's routes, for the toolbar's route switcher. Supplying this also
+   * turns on link following: a click on a cross-page link inside the preview
+   * calls `routes.onChange` with the route it pointed at.
+   */
+  routes?: RouteSwitcherProps;
 
   /** Controlled tab. Omit to let the panel own it. */
   tab?: PreviewTab;
@@ -82,6 +91,7 @@ export function PreviewPanel({
   title,
   pageType,
   isStreaming = false,
+  routes,
   tab: tabProp,
   onTabChange,
   device: deviceProp,
@@ -127,6 +137,22 @@ export function PreviewPanel({
     if (tab === "code") setCodeVisited(true);
   }, [tab]);
 
+  // Following a link inside the preview. The sandbox cannot route on its own —
+  // it holds one page's tree — so it reports the click and the route changes out
+  // here, which is also what the toolbar's switcher does.
+  const onRouteChange = routes?.onChange;
+  useEffect(() => {
+    if (!onRouteChange) return;
+
+    const onMessage = (event: MessageEvent): void => {
+      const route = previewNavigationTarget(event.data);
+      if (route !== null) onRouteChange(route);
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [onRouteChange]);
+
   const committed = useCommittedFiles(files, isStreaming, streamCommitInterval);
   const adapted = useMemo(
     () => toSandpack({ files: committed, theme, title }),
@@ -138,10 +164,28 @@ export function PreviewPanel({
   const hasFiles = fileCount > 0;
   const showPreviewFrame = mounted && (hasFiles || isStreaming);
 
+  // An empty route inside a shop that has another page is a slot waiting to be
+  // filled, and worth offering to fill. An empty route in an empty project is
+  // just an empty project, so the ordinary copy stands.
+  const onBuild = routes?.onBuild;
+  const emptyRoute =
+    routes && onBuild && routes.built.length > 0 && !routes.built.includes(routes.active)
+      ? routes.active
+      : null;
+  const emptyState =
+    emptyRoute !== null && onBuild ? (
+      <PreviewEmptyState onBuild={() => onBuild(emptyRoute)} pageType={emptyRoute} />
+    ) : (
+      <PreviewEmptyState pageType={pageType} />
+    );
+
   return (
     <section
+      // Deliberately not overflow-hidden: the toolbar's route switcher drops a
+      // menu out of it and would be clipped. The panel body clips itself
+      // instead, which is all the Sandpack iframe needs.
       className={[
-        "flex h-full min-h-0 flex-col overflow-hidden rounded-amb-panel border border-amb-border bg-amb-background shadow-amb-xs",
+        "flex h-full min-h-0 flex-col rounded-amb-panel border border-amb-border bg-amb-background shadow-amb-xs",
         className ?? "",
       ]
         .join(" ")
@@ -157,14 +201,15 @@ export function PreviewPanel({
         onDeviceChange={selectDevice}
         onTabChange={selectTab}
         panelIds={panelIds}
+        {...(routes ? { routes } : {})}
         tab={tab}
       />
 
-      <div className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-b-amb-panel">
         <div
           className={[
             "absolute inset-0",
-            tab === "preview" ? "" : "invisible pointer-events-none",
+            tab === "preview" ? "" : "dsp-panel-hidden pointer-events-none",
           ]
             .join(" ")
             .trimEnd()}
@@ -178,14 +223,14 @@ export function PreviewPanel({
           ) : hasFiles || isStreaming ? (
             <PreviewLoadingState />
           ) : (
-            <PreviewEmptyState pageType={pageType} />
+            emptyState
           )}
         </div>
 
         <div
           className={[
             "absolute inset-0",
-            tab === "code" ? "" : "invisible pointer-events-none",
+            tab === "code" ? "" : "dsp-panel-hidden pointer-events-none",
           ]
             .join(" ")
             .trimEnd()}
@@ -199,7 +244,7 @@ export function PreviewPanel({
           ) : hasFiles ? (
             <PreviewLoadingState label="Opening the editor" />
           ) : (
-            <PreviewEmptyState pageType={pageType} />
+            emptyState
           )}
         </div>
       </div>

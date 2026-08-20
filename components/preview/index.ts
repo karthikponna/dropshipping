@@ -33,6 +33,9 @@ export type { CodePanelProps } from "./CodePanel";
 export { PreviewToolbar } from "./PreviewToolbar";
 export type { PreviewToolbarProps } from "./PreviewToolbar";
 
+export { RouteSwitcher } from "./RouteSwitcher";
+export type { RouteSwitcherProps } from "./RouteSwitcher";
+
 export { PreviewEmptyState, PreviewLoadingState } from "./PreviewStates";
 export type { PreviewEmptyStateProps } from "./PreviewStates";
 

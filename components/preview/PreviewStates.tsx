@@ -1,6 +1,7 @@
 "use client";
 
-import type { PageType } from "@/lib/types";
+import { PAGE_ROUTES } from "@/lib/framework/routes";
+import { PAGE_TYPE_LABELS, type PageType } from "@/lib/types";
 
 import { LayoutIcon } from "./icons";
 
@@ -12,10 +13,17 @@ const EMPTY_COPY: Record<PageType, string> = {
 export interface PreviewEmptyStateProps {
   /** Tailors the copy to the page type the user picked. */
   pageType?: PageType;
+  /**
+   * Present when this is a route of a shop that already exists elsewhere — the
+   * slot is real and unbuilt, rather than the project being empty.
+   */
+  onBuild?: () => void;
 }
 
-/** Nothing generated yet. */
-export function PreviewEmptyState({ pageType }: PreviewEmptyStateProps) {
+/** Nothing generated yet, for this page or for the whole project. */
+export function PreviewEmptyState({ pageType, onBuild }: PreviewEmptyStateProps) {
+  const route = pageType ?? "landing";
+
   return (
     <div className="flex h-full w-full items-center justify-center bg-amb-muted p-6">
       <div className="max-w-xs text-center">
@@ -23,11 +31,28 @@ export function PreviewEmptyState({ pageType }: PreviewEmptyStateProps) {
           <LayoutIcon />
         </span>
         <h4 className="text-[15px] font-medium tracking-[-0.01em] text-amb-foreground">
-          No preview yet
+          {onBuild ? (
+            <>
+              <span className="font-amb-mono">{PAGE_ROUTES[route]}</span> is empty
+            </>
+          ) : (
+            "No preview yet"
+          )}
         </h4>
         <p className="mt-1.5 text-[13px] leading-relaxed text-amb-muted-foreground">
-          {pageType ? EMPTY_COPY[pageType] : EMPTY_COPY.landing}
+          {onBuild
+            ? `This route is part of the shop, and the other pages already link to it — it just has no page yet. Building it reuses the shop's palette, type and chrome.`
+            : EMPTY_COPY[route]}
         </p>
+        {onBuild ? (
+          <button
+            className="mt-3.5 inline-flex h-8 items-center rounded-amb-row bg-amb-primary px-3 text-[13px] font-medium text-amb-primary-foreground transition-opacity hover:opacity-90"
+            onClick={onBuild}
+            type="button"
+          >
+            Build the {PAGE_TYPE_LABELS[route].toLowerCase()}
+          </button>
+        ) : null}
       </div>
     </div>
   );

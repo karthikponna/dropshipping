@@ -10,12 +10,13 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
   {
     path: "components/Navbar.tsx",
     name: "Navbar",
-    purpose: "Store bar with wordmark, a few category links and a cart affordance.",
+    purpose: "Sticky shop bar: wordmark, the shop's two route links, cart control.",
     signature: "export default function Navbar()",
     requirements: [
-      "Shop name as a text wordmark on the left",
-      "2–4 category links",
-      "A cart button with an inline SVG glyph and an item count",
+      "Shop name as a text wordmark on the left, wrapped in <a href=\"/\">",
+      "Exactly two nav links, in this order — Home at href=\"/\" and Shop at href=\"/product\" (aria-current=\"page\" here)",
+      "No section links (#reviews, #specs) and no CTA button in the header — the sections belong to this route only, and this page's actions live in its body",
+      "A single <button type=\"button\" aria-label=\"Cart\"> at the right end, cart glyph plus item count",
       "Sticky at the top with a hairline bottom border",
     ],
   },
@@ -34,9 +35,10 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
   {
     path: "components/ProductInfo.tsx",
     name: "ProductInfo",
-    purpose: "Title, rating, description and the variant pickers.",
+    purpose: "Breadcrumb back to the shop, title, rating, description and the variant pickers.",
     signature: "export default function ProductInfo()",
     requirements: [
+      "A breadcrumb above the title: <a href=\"/\">shop name</a>, a separator, then the product name as plain text",
       "One h1 with the product name and a one-paragraph description",
       "A rating line with a review count",
       "At least one variant group (size, colour or scent) rendered as selectable chips",
@@ -92,11 +94,12 @@ export const PRODUCT_COMPONENTS: readonly ComponentShell[] = [
   {
     path: "components/Footer.tsx",
     name: "Footer",
-    purpose: "Store footer with link columns, payment note and legal line.",
+    purpose: "Shop footer with the route links, support columns and a legal line.",
     signature: "export default function Footer()",
     requirements: [
-      "Wordmark plus a one-line store description",
-      "2–3 link columns covering shipping, returns and contact",
+      "Wordmark plus a one-line shop description",
+      "A column headed \"Shop\" carrying href=\"/\" then href=\"/product\"",
+      "A second column headed \"Support\" listing shipping, returns and contact as plain text, not dead links",
       "Copyright line with the shop name",
     ],
   },
@@ -120,6 +123,7 @@ export const productFramework: PageFramework = {
     "app/page.tsx imports every component from '@/components/<Name>' and renders them in the composition order, wrapped in a <main> element.",
     "Layout above the fold is a two-column split: Gallery on the left, then ProductInfo, PriceBlock and AddToCart stacked on the right. It collapses to one column below lg.",
     "Specs and Reviews sit full width below the split.",
+    "Navigation away from this page points back at the shop: the wordmark, the Home link and the breadcrumb all use href=\"/\". The nav's Shop link still points at href=\"/product\" and marks itself as the current route. Every purchase control is a <button>.",
     "Invent one specific product with a real name, price and materials — never lorem ipsum and never the word 'placeholder'.",
     "All images use https://picsum.photos/seed/<kebab-slug>/<w>/<h> so they always resolve.",
     "Tailwind utility classes only. No CSS files, no styled-components, no UI library imports.",

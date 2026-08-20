@@ -10,6 +10,7 @@ import type {
   GenerationEvent,
   GenerationMeta,
   GenerationPhase,
+  MemoryNotice,
   Theme,
 } from "@/lib/types";
 
@@ -153,6 +154,8 @@ export interface GenerationStreamState {
   theme: Theme;
   meta: GenerationMeta;
   text: string;
+  /** What the memory graph contributed, in the order it was found. */
+  memory: MemoryNotice[];
   versionId: string | null;
   projectId: string | null;
   error: ErrorEvent | null;
@@ -172,6 +175,7 @@ export function createGenerationStreamState(base?: {
     theme: base?.theme ?? DEFAULT_THEME,
     meta: base?.meta ?? DEFAULT_META,
     text: "",
+    memory: [],
     versionId: null,
     projectId: null,
     error: null,
@@ -190,6 +194,8 @@ export function applyGenerationEvent(
   switch (event.type) {
     case "status":
       return { ...state, phase: event.phase, statusMessage: event.message ?? null };
+    case "memory":
+      return { ...state, memory: [...state.memory, event.memory] };
     case "meta":
       return { ...state, meta: event.meta };
     case "theme":

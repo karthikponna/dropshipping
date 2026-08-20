@@ -10,7 +10,6 @@ import { Logo } from "./logo";
 const NAV = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#page-types", label: "Page types" },
-  { href: "#features", label: "Features" },
 ] as const;
 
 const NAV_LINK =

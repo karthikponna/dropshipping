@@ -52,6 +52,13 @@ export const previewSandpackTheme: SandpackTheme = {
  * the panel).
  */
 export const PREVIEW_PANEL_CSS = `
+/* CSS visibility is inherited, but a descendant may override it — and Sandpack
+   sets \`visibility: visible\` on its own tab panels. That defeated hiding the
+   inactive panel with \`visibility: hidden\` alone: the code editor kept
+   painting over the preview iframe stacked beneath it. Force the whole subtree
+   back to hidden so the inactive tab cannot draw. */
+.dsp-panel-hidden,
+.dsp-panel-hidden * { visibility: hidden !important; }
 .dsp-preview .sp-wrapper,
 .dsp-preview .sp-stack,
 .dsp-preview .sp-preview-container { height: 100%; }
