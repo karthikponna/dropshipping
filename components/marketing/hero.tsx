@@ -1,4 +1,4 @@
-import { SecondaryLink, SplitLink } from "./buttons";
+import { SplitLink } from "./buttons";
 import { DotGrid } from "./frame";
 
 export function Hero() {
@@ -20,9 +20,8 @@ export function Hero() {
           in the same thread, keep every version.
         </p>
 
-        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+        <div className="mt-8 flex justify-center">
           <SplitLink href="/signup" label="Start building" />
-          <SecondaryLink href="#how-it-works">See how it works</SecondaryLink>
         </div>
       </div>
     </section>
