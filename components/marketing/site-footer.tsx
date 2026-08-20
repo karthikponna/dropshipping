@@ -38,11 +38,11 @@ const FOOTER_LINK =
 function Wordmark() {
   return (
     <div aria-hidden="true" className="overflow-clip">
-      {/* 16.8vw is the size at which this exact string in Space Grotesk spans
+      {/* 17.3vw is the size at which this exact string in Space Grotesk spans
           just under the viewport — measured, not guessed, and it holds at every
-          width because vw scales linearly. */}
-      <span className="-mb-[0.12em] block translate-y-[0.02em] text-center font-sm-heading text-[16.8vw] leading-[0.8] font-medium tracking-[-0.045em] whitespace-nowrap text-sm-card-blue select-none">
-        dropshipping<span className="text-sm-blue/25">.</span>
+          width because vw scales linearly. Re-measure if the word changes. */}
+      <span className="-mb-[0.12em] block translate-y-[0.02em] text-center font-sm-heading text-[17.3vw] leading-[0.8] font-medium tracking-[-0.045em] whitespace-nowrap text-sm-card-blue select-none">
+        dropshipping
       </span>
     </div>
   );

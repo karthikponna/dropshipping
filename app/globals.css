@@ -27,9 +27,6 @@
   --color-sm-text-dim: #888e94;
   --color-sm-bg: #ffffff;
   --color-sm-bg-alt: #f4f8ff;
-  /* The one dark surface in the light marketing system: sm-text pulled toward
-     sm-blue, so lit dots and white type have something to sit on. */
-  --color-sm-ink: #070d1c;
   --color-sm-paper: #fafafa;
   --color-sm-paper-blue: #f6f8fc;
   --color-sm-panel: #fbfcfe;

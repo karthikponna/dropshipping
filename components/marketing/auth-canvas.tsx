@@ -23,7 +23,9 @@ const POINTER_EASE = 0.12;
 
 const DOT_MIN_RADIUS = 0.55;
 const DOT_MAX_RADIUS = 2.5;
-const DOT_MIN_ALPHA = 0.1;
+/** Higher than it was over near-black: the brand blue is luminous enough that
+ *  a dimmer floor loses the resting field entirely. */
+const DOT_MIN_ALPHA = 0.16;
 const DOT_MAX_ALPHA = 1;
 
 /** Ambient blobs: phase, speed and extent of each drifting light source. */
@@ -119,11 +121,13 @@ export function AuthCanvas({ className }: { className?: string }) {
           if (intensity <= 0.015) continue;
           const level = Math.min(1, intensity);
 
-          // Deep blue in the dim field, warming to white at the bright core, so
-          // the pointer reads as light rather than as a bigger blue dot.
+          // Pale blue-white in the dim field, clearing to pure white at the
+          // bright core, so the pointer reads as light rather than as a bigger
+          // dot. Both endpoints are lighter than the brand blue behind them —
+          // on this ground a dot darker than the field would read as a hole.
           const warmth = Math.max(0, level - 0.45) / 0.55;
-          const red = Math.round(lerp(96, 255, warmth));
-          const green = Math.round(lerp(160, 252, warmth));
+          const red = Math.round(lerp(198, 255, warmth));
+          const green = Math.round(lerp(222, 255, warmth));
 
           context.beginPath();
           context.arc(x, y, lerp(DOT_MIN_RADIUS, DOT_MAX_RADIUS, level), 0, Math.PI * 2);

@@ -3,7 +3,7 @@ import { Eyebrow } from "./eyebrow";
 import { CornerFrame } from "./frame";
 
 /**
- * The panel beside the login card: a deep blue field of halftone dots that
+ * The panel beside the login card: a brand-blue field of halftone dots that
  * lights up under the cursor, with the product's one-line claim over it.
  *
  * Hidden below `lg`. On a narrow screen it would push the form below the fold,
@@ -19,7 +19,7 @@ const CLAIM = [
 export function AuthShowcase() {
   return (
     <CornerFrame className="relative hidden min-h-[560px] flex-1 p-2.5 lg:block">
-      <div className="relative h-full overflow-hidden bg-sm-ink">
+      <div className="relative h-full overflow-hidden bg-sm-blue">
         {/* The canvas sits under the copy and takes the pointer for the whole
             panel — the listener is on this element, not on the canvas. */}
         <AuthCanvas className="absolute inset-0 block h-full w-full" />
@@ -28,7 +28,7 @@ export function AuthShowcase() {
             the open half of the panel, where the dots do the work. */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 block bg-gradient-to-t from-sm-ink via-sm-ink/75 via-35% to-transparent to-65%"
+          className="pointer-events-none absolute inset-0 block bg-gradient-to-t from-sm-blue via-sm-blue/75 via-35% to-transparent to-65%"
         />
 
         <div className="pointer-events-none relative flex h-full flex-col justify-between p-8 xl:p-10">
