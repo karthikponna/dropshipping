@@ -2,20 +2,19 @@
 
 import { useId, useState } from "react";
 
-import { CheckIcon } from "@/components/dashboard/icons";
 import type { ModelChoice } from "@/lib/ai/model";
 import { cx } from "@/lib/dashboard/format";
 import { useDismiss } from "@/lib/dashboard/use-dismiss";
 
-import { ChevronDownIcon, SparkIcon } from "./icons";
+import { CheckIcon, ChevronDownIcon, SparkleIcon } from "./icons";
 
 /**
  * Picks the Anthropic model the next generation runs on.
  *
- * It sits in the composer rather than the header because it belongs to the act
- * of sending — the same place the user decides what to say and what to attach —
- * and because the header already carries the shop name, the page switcher and
- * history in a 400px rail.
+ * It sits in the composer rather than a header because it belongs to the act of
+ * sending — the same place the user decides what to say and what to attach. Both
+ * composers show it: the dock, where the first generation of a shop is ordered,
+ * and the builder rail, where every refinement after that is.
  *
  * The label drops the "Claude " prefix: every option has it, so the only thing
  * it adds at this size is four characters of noise between the icon and the
@@ -34,9 +33,21 @@ export interface ModelSwitcherProps {
   onChange: (id: string) => void;
   /** Locked while a run is in flight — the model is fixed once the call is open. */
   disabled?: boolean;
+  /**
+   * Which way the menu opens. The rail's composer sits at the bottom of the
+   * viewport, where a menu dropping down would land off-screen; the dock sits
+   * mid-page with room below.
+   */
+  placement?: "up" | "down";
 }
 
-export function ModelSwitcher({ models, selected, onChange, disabled = false }: ModelSwitcherProps) {
+export function ModelSwitcher({
+  models,
+  selected,
+  onChange,
+  disabled = false,
+  placement = "up",
+}: ModelSwitcherProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useDismiss<HTMLDivElement>(open, () => setOpen(false));
   const menuId = useId();
@@ -66,7 +77,7 @@ export function ModelSwitcher({ models, selected, onChange, disabled = false }: 
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <SparkIcon className="h-3 w-3 shrink-0" />
+        <SparkleIcon className="h-3 w-3 shrink-0" />
         <span className="truncate">{label}</span>
         <ChevronDownIcon
           className={cx("h-3 w-3 shrink-0 transition-transform", open ? "rotate-180" : "")}
@@ -75,9 +86,10 @@ export function ModelSwitcher({ models, selected, onChange, disabled = false }: 
 
       {open ? (
         <div
-          // Opens upward: the composer is at the bottom of the rail, so a menu
-          // dropping down would land off-screen.
-          className="absolute bottom-[calc(100%+4px)] left-0 z-30 max-h-64 w-60 overflow-y-auto rounded-amb-panel border border-amb-border bg-amb-background p-1 shadow-amb-md"
+          className={cx(
+            "absolute left-0 z-30 max-h-64 w-60 overflow-y-auto rounded-amb-panel border border-amb-border bg-amb-background p-1 shadow-amb-md",
+            placement === "up" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]",
+          )}
           id={menuId}
           role="menu"
         >

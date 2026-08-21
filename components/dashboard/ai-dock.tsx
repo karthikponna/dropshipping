@@ -7,6 +7,8 @@ import { cx } from "@/lib/dashboard/format";
 import { PROJECT_FORM_INITIAL_STATE } from "@/lib/dashboard/form-state";
 import { PAGE_TYPE_LABELS, PAGE_TYPES, type PageType } from "@/lib/types";
 import { ArrowUpIcon, LayoutIcon, TagIcon } from "./icons";
+import { ModelSwitcher } from "./model-switcher";
+import { useModelChoice } from "./use-model-choice";
 
 const PAGE_TYPE_ICONS: Record<PageType, (props: { className?: string }) => React.ReactElement> = {
   landing: LayoutIcon,
@@ -32,6 +34,9 @@ export function AiDock({ hints, defaultPageType = "landing" }: AiDockProps) {
   const [pageType, setPageType] = useState<PageType>(defaultPageType);
   const [prompt, setPrompt] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  // Picked here, read again by the builder: this form redirects, so the choice
+  // travels in `localStorage` rather than the submitted fields.
+  const model = useModelChoice();
 
   const canSubmit = prompt.trim().length > 0 && !pending;
 
@@ -40,7 +45,8 @@ export function AiDock({ hints, defaultPageType = "landing" }: AiDockProps) {
       <form
         ref={formRef}
         action={formAction}
-        className="w-amb-dock max-w-full overflow-hidden rounded-amb-dock border border-transparent bg-amb-card shadow-amb-float"
+        // Not clipped: the model menu opens past the card's bottom edge.
+        className="w-amb-dock max-w-full rounded-amb-dock border border-transparent bg-amb-card shadow-amb-float"
       >
         <input type="hidden" name="pageType" value={pageType} />
 
@@ -111,11 +117,20 @@ export function AiDock({ hints, defaultPageType = "landing" }: AiDockProps) {
             </button>
           </div>
 
-          <p className="mt-1 text-[12px] text-amb-muted-foreground/70">
-            {pending
-              ? "Creating the page…"
-              : "Enter to build. Shift + Enter for a new line."}
-          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <ModelSwitcher
+              disabled={pending}
+              models={model.models}
+              onChange={model.select}
+              placement="down"
+              selected={model.selected}
+            />
+            <p className="min-w-0 flex-1 truncate text-[12px] text-amb-muted-foreground/70">
+              {pending
+                ? "Creating the page…"
+                : "Enter to build. Shift + Enter for a new line."}
+            </p>
+          </div>
         </div>
       </form>
 

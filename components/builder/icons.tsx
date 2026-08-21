@@ -38,16 +38,6 @@ export function HistoryIcon(props: IconProps) {
   );
 }
 
-/** The model doing the writing. */
-export function SparkIcon(props: IconProps) {
-  return (
-    <Glyph {...props}>
-      <path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9Z" />
-      <path d="M18.5 3.5v3M20 5h-3" />
-    </Glyph>
-  );
-}
-
 /** Restore an earlier version. */
 export function RestoreIcon(props: IconProps) {
   return (
@@ -117,15 +107,6 @@ export function ScreenIcon(props: IconProps) {
     <Glyph {...props}>
       <rect x="3" y="4.5" width="18" height="12" rx="2" />
       <path d="M9 20h6M12 16.5V20" />
-    </Glyph>
-  );
-}
-
-/** Opens the page switcher menu. */
-export function ChevronDownIcon(props: IconProps) {
-  return (
-    <Glyph {...props}>
-      <path d="m6 9.5 6 6 6-6" />
     </Glyph>
   );
 }

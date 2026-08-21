@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { readStoredModel } from "@/components/dashboard/use-model-choice";
 import { PreviewPanel } from "@/components/preview";
 import type { GenerationStreamState } from "@/lib/ai/stream-client";
 import { cx } from "@/lib/dashboard/format";
@@ -225,6 +226,9 @@ export function BuilderWorkspace({
 
   const send = useCallback(
     (instruction: string, attachments: readonly ImageAsset[] = [], model?: string): void => {
+      // The autostarted first run has no composer to name a model, so it falls
+      // back to whatever the dock stored on its way here.
+      const chosenModel = model ?? readStoredModel();
       const pageType = activePageType;
       const page = pageState[pageType];
       const pageHasFiles = Object.keys(page.files).length > 0;
@@ -246,7 +250,7 @@ export function BuilderWorkspace({
         mode,
         pageType,
         prompt: instruction,
-        ...(model ? { model } : {}),
+        ...(chosenModel ? { model: chosenModel } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
         // A brand-new page sends no base theme on purpose: the server reads the
         // sibling page's design out of the graph, which also carries its section

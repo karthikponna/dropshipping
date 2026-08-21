@@ -111,6 +111,15 @@ export function ChevronRightIcon(props: IconProps) {
   );
 }
 
+/** Opens a menu that drops below its trigger. */
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="m6 9.5 6 6 6-6" />
+    </Glyph>
+  );
+}
+
 export function CheckIcon(props: IconProps) {
   return (
     <Glyph {...props}>

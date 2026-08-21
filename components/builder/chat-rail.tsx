@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ArrowUpIcon } from "@/components/dashboard/icons";
+import { ModelSwitcher } from "@/components/dashboard/model-switcher";
+import { useModelChoice } from "@/components/dashboard/use-model-choice";
 import type { GenerationStreamState } from "@/lib/ai/stream-client";
 import { cx, formatCount } from "@/lib/dashboard/format";
 import { PAGE_TYPE_LABELS, type ChatMessage, type ImageAsset, type PageType } from "@/lib/types";
@@ -10,11 +12,9 @@ import { PAGE_TYPE_LABELS, type ChatMessage, type ImageAsset, type PageType } fr
 import { AttachButton, AttachmentStrip } from "./attachment-strip";
 import { ChatMessageView } from "./chat-message-view";
 import { HistoryIcon } from "./icons";
-import { ModelSwitcher } from "./model-switcher";
 import { PageTypeSwitcher } from "./page-type-switcher";
 import { StreamActivity } from "./stream-activity";
 import { useAttachments } from "./use-attachments";
-import { useModelChoice } from "./use-model-choice";
 
 /**
  * The conversation half of the builder: what has been asked and built so far,

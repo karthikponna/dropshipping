@@ -2,12 +2,15 @@
 
 import { useId, useState } from "react";
 
-import { CheckIcon, LayoutIcon, TagIcon } from "@/components/dashboard/icons";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  LayoutIcon,
+  TagIcon,
+} from "@/components/dashboard/icons";
 import { cx } from "@/lib/dashboard/format";
 import { useDismiss } from "@/lib/dashboard/use-dismiss";
 import { PAGE_TYPES, PAGE_TYPE_LABELS, type PageType } from "@/lib/types";
-
-import { ChevronDownIcon } from "./icons";
 
 /**
  * Switches the builder between the two pages of one shop.
