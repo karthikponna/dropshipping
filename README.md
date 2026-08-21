@@ -16,6 +16,15 @@ HydraDB provides contextual memory across pages and sessions, allowing Claude to
 - **Export:** JSZip
 - **Deployment:** Vercel for the application, Railway and Docker for HydraDB
 
+## How HydraDB Is Used
+
+- Acts as the contextual memory layer for AI generation.
+- Stores relationships between users, projects, sessions, prompts, themes, components, and generated pages.
+- Helps Claude preserve colors, fonts, layouts, and other design choices across landing and product pages.
+- Retrieves relevant prompts and project context before Claude generates or refines a page.
+- Enables cross-session recall so users can reuse and adapt websites they created previously.
+- Keeps the generated experience consistent, personalized, and aware of earlier work.
+
 ## Running Locally
 
 ### Prerequisites
